@@ -57,6 +57,6 @@ pub fn cmd_split(input: &str) -> (&str, String) {
 	};
 
 	let args = split.collect::<Vec<&str>>().join(" ");
-	println!("cmd: {}; args: {}", cmd, args);
+	//println!("cmd: {}; args: {}", cmd, args);
 	(cmd, args)
 }
