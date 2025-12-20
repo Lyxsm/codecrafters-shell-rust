@@ -6,9 +6,8 @@ fn main() {
 }
 
 fn repl() {
-    //let mut b = true;
-    //while b {
-    while true {
+    let mut b = true;
+    while b {
         // Prints "$" to terminal
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -20,10 +19,10 @@ fn repl() {
         command = command.replace("\n", "").replace("\r", "").replace("\r\n", "");
 
         match command.as_str() {
-            //"exit" => {
-            //    b = false;
-            //    println!("test");
-            //},
+            "exit" => {
+                b = false;
+                println!("test");
+            },
             _ => {
                 println!("{}: command not found", command);
             }
