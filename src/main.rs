@@ -21,7 +21,6 @@ fn repl() {
         match command.as_str() {
             "exit" => {
                 b = false;
-                println!("test");
             },
             _ => {
                 println!("{}: command not found", command);
