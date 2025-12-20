@@ -16,14 +16,17 @@ fn repl() {
         let mut command = String::new();
         io::stdin().read_line(&mut command).unwrap();
 
-        command = command.replace("\n", "").replace("\r", "").replace("\r\n", "");
-
-        match command.as_str() {
-            "exit" => {
-                b = false;
-            },
-            _ => {
-                println!("{}: command not found", command);
+        if command.starts_with("echo") {
+            let input = command.strip_prefix("echo ").unwrap().trim();
+            println!("{}", input);
+        } else {
+            match command.trim() {
+                "exit" => {
+                    b = false;
+                },
+                cmd => {
+                    println!("{cmd}: command not found");
+                }
             }
         }
     }
