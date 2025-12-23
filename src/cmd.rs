@@ -132,10 +132,7 @@ pub fn split_string(input: &str) -> String {
 
 	for (start, end) in quotes {
 		if last < start {
-			let unquoted = &input[last..start];
-				//.split_whitespace()
-				//.collect::<Vec<_>>()
-				//.join(" ");
+			let unquoted = collapse_whitespace(&input[last..start]);
 			result.push_str(&unquoted);
 		}
 
@@ -146,10 +143,7 @@ pub fn split_string(input: &str) -> String {
 	}
 
 	if last < input.len() {
-		let tail = &input[last..];
-			//.split_whitespace()
-			//.collect::<Vec<_>>()
-			//.join(" ");
+		let tail = collapse_whitespace(&input[last..]);
 		result.push_str(&tail);
 	}
 
@@ -175,4 +169,23 @@ pub fn find_single_quote_ranges(input: &str) -> Vec<(usize, usize)> {
 	}
 
 	ranges
+}
+
+pub fn collapse_whitespace(input: &str) -> String {
+	let mut result = String::new();
+	let mut in_whitespace = false;
+
+	for c in input.chars() {
+		if c.is_whitespace() {
+			if !in_whitespace {
+				result.push(' ');
+				in_whitespace = true;
+			}
+		} else {
+			result.push(c);
+			in_whitespace = false;
+		}
+	}
+
+	result
 }
