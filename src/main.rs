@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
+use std::process::Command;
 
 mod cmd;
 
@@ -31,13 +32,23 @@ fn repl() {
                     _ => println!("Something went wrong!"),
                 }
             },
-            //cmd::Type::PathExec => {
-            //    println!("{:?}", cmd::find_in_path(command));
-            //    match cmd::find_in_path(command) {
-            //        Some(path_buf) => println!("{command} is {}", path_buf.display()),
-            //        None => println!("{command}: not found"),
-            //    }
-            //},
+            cmd::Type::PathExec => {
+                match cmd::find_in_path(command) {
+                    Some(path_buf) => {
+                        let mut arguments = Vec::new();
+                        for arg in args.split_whitespace() {
+                            arguments.push(arg);
+                        }
+                        Command::new(command)
+                        .args(&arguments)
+                        .spawn()
+                        .expect("failed to execute")
+                        .wait()
+                        .expect("failed to wait");
+                },
+                    None => println!("{command}: not found"),
+                }
+            },
             _ => println!("{command}: command not found"),
         }
     }
