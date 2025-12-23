@@ -122,7 +122,8 @@ pub fn single_quotes(input: &str) -> String {
 	let quote: Vec<_> = input.match_indices("'").collect();
 
 	let string = &input[quote[0].0 + 1..quote[1].0];
-	string.to_string()
+	let string = string.to_string() + " ";
+	string
 }
 
 pub fn split_string(input: &str) -> String {
