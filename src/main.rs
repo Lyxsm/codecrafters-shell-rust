@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use std::io::{self, Write};
 
-mod cmds;
+mod cmd;
 
 fn main() {
     repl();
@@ -9,28 +9,36 @@ fn main() {
 
 fn repl() {
     loop {
-        // Prints "$" to terminal
         print!("$ ");
         io::stdout().flush().unwrap();
     
-        // Reads user input and stores it in the "command" variable
-        let mut command = String::new();
-        io::stdin().read_line(&mut command).unwrap();
-        let command = command.trim();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let (cmd_type, command, args) = cmd::parse(&input);
 
-        let (action, cmd_type, args) = cmds::eval_cmd(command);
-        match action {
-            cmds::CmdAction::Terminate => break,
-            cmds::CmdAction::Print(str) => println!("{str}"),
-            cmds::CmdAction::Type(str) => {
-                let arg_type = cmds::cmd_type(str.as_str());
-                if arg_type == cmds::CmdType::Invalid {
-                    println!("{str}: not found");               
-                } else {
-                    println!("{str} is a shell {}", if cmd_type == cmds::CmdType::Builtin {"builtin"} else {"poop"});
+        match cmd_type {
+            cmd::Type::BuiltIn => {
+                match command {
+                    "echo" => println!("{args}"),
+                    "exit" => break,
+                    "type" => {
+                        match cmd::cmd_type(args) {
+                            cmd::Type::BuiltIn => println!("{} is a shell builtin", args),
+                            cmd::Type::PathExec => println!("{} is {}", args, cmd::find_in_path(args).expect("not found").display()),
+                            cmd::Type::Invalid => println!("{}: not found", args),
+                        };
+                    },
+                    _ => println!("Something went wrong!"),
                 }
-            }
-            cmds::CmdAction::None => println!("{command}: command not found"),
+            },
+            //cmd::Type::PathExec => {
+            //    println!("{:?}", cmd::find_in_path(command));
+            //    match cmd::find_in_path(command) {
+            //        Some(path_buf) => println!("{command} is {}", path_buf.display()),
+            //        None => println!("{command}: not found"),
+            //    }
+            //},
+            _ => println!("{command}: command not found"),
         }
     }
 }

@@ -1,62 +1,82 @@
 #![allow(unused)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, Pathbuf};
+use std::env;
+
+pub const BUILT_IN: [&str; 3] = ["echo", "exit", "type"];
+
 #[derive(PartialEq)]
-pub enum CmdType {
-	Builtin,
-	Valid,
+pub enum Type {
+	BuiltIn,
+	PathExec,
+	PathNoExec,
 	Invalid,
 }
-#[derive(PartialEq)]
-pub enum CmdAction {
-	Print(String),
-	Terminate,
-	Type(String),
-	None,
-}
 
-#[derive(PartialEq)]
-pub enum Eval {
-	CmdType,
-	CmdAction,
-}
 
-pub fn eval_cmd(input: &str) -> (CmdAction, CmdType, String) {
+pub fn parse(input: &str) -> (Type, &str, &str) {
+	let path = std::env::var("PATH").unwrap();
+	let input = input.trim();
 	let (cmd, args) = cmd_split(input);
-	let cmd_action = cmd_action(cmd, args.clone());
-	let cmd_type = cmd_type(cmd);
 
-	(cmd_action, cmd_type, args)
-}
-
-pub fn cmd_type(cmd: &str) -> CmdType {
-	match cmd {
-		"echo" => CmdType::Builtin,
-		"exit" => CmdType::Builtin,
-		"type" => CmdType::Builtin,
-		"none" => CmdType::Invalid,
-		_ => CmdType::Invalid,
+	for arg in args.split_whitespace() {
+		if BUILT_IN.contains(&arg) {
+			return (Type::BuiltIn, arg, &args);
+		} else {
+			match find_in_path(arg) {
+				Some(path_buf) => return (Type::PathExec, arg, &args),
+				None => return (Type::PathNoExec, arg, &args),
+			}
+			return (Type::Invalid, arg, &args);
+		}
 	}
+	return (Type::Invalid, arg, &args);
 }
 
-pub fn cmd_action(cmd: &str, args: String) -> CmdAction {
-	match cmd {
-		"echo" => CmdAction::Print(args),
-		"exit" => CmdAction::Terminate,
-		"type" => CmdAction::Type(args),
-		"none" => CmdAction::None,
-		_ => CmdAction::Print(format!("{cmd}: command not found")),
-	}
-}
 
 pub fn cmd_split(input: &str) -> (&str, String) {
-	let mut split = input.split(" ");
+	let (cmd, args) = input.split_once(' ').unwrap_or((input, ""));
+	(cmd, args.to_string())
+}
 
-	let cmd = if let Some(cmd) = split.next() {
-		cmd
-	} else {
-		return ("none", "none".to_string());
-	};
+pub fn is_executable(path: &Path) -> bool {
+	path.metadata()
+		.map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
+		.unwrap_or(false)
+}
 
-	let args = split.collect::<Vec<&str>>().join(" ");
-	//println!("cmd: {}; args: {}", cmd, args);
-	(cmd, args)
+pub fn cmd_type(input: &str) -> Type {
+	let input = input.trim();
+	let (cmd, args) = cmd_split(input);
+
+	for arg in args.split_whitespace() {
+		if BUILT_IN.contains(&arg) {
+			return Type::BuiltIn;
+		} else {
+			match find_in_path(arg) {
+				Some(path_buf) => return Type::PathExec,
+				None => return Type::PathNoExec,
+			}
+			return Type::Invalid;
+		}
+	}
+	return Type::Invalid
+;}
+
+pub fn find_in_path(binary: &str) -> Option<PathBuf> {
+	for dir in get_path_entries() {
+		let candidate = dir.join(binary);
+
+		if is_executable(&candidate) {
+			return Some(candidate);
+		}
+	}
+
+	None
+}
+
+pub fn get_path_entries() -> Vec<PathBuf> {
+	env::var_os("PATH")
+		.map(|paths| env::split_paths(&paths).collect())
+		.unwrap()
 }
