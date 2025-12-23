@@ -68,13 +68,6 @@ pub fn change_dir(input: &str) {
 	let mut path: PathBuf;
 	let mut dir = input.trim();
 	let mut new_dir = String::new();
-	//match dir.split("/").next() {
-	//	//Some("~") 	=> path = env::home_dir().expect("you are homeless"),
-	//	//Some(".")  	=> path = ".".into(),
-	//	//Some("..") 	=> path = handle_error(fs::canonicalize(".."), "couldn't find directory").unwrap_or(".".into()),
-	//	Some("") 	=> path = "~".into(),
-	//	_ => path = handle_error(fs::canonicalize(dir), "couldn't find directory").unwrap_or(".".into()),
-	//}
 
 	if dir.is_empty() || dir == "~" {
 		path = env::home_dir().expect("you are homeless");
@@ -95,17 +88,17 @@ pub fn change_dir(input: &str) {
 			return;	
 		}
 	} else {
-		path = handle_error(fs::canonicalize(dir), "couldn't find directory").unwrap_or(".".into());
+		path = handle_error(dir, fs::canonicalize(dir), "No such file or directory").unwrap_or(".".into());
 	}
 
 	env::set_current_dir(&path);
 }
 
-pub fn handle_error<T, E>(result: Result<T, E>, error_message: &str) -> Option<T> {
+pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) -> Option<T> {
 	match result {
 		Ok(value) => Some(value),
 		Err(_) => {
-			println!("{}", error_message);
+			println!("cd: {}: {}", dir, error_message);
 			None
 		}
 	}
