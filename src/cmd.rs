@@ -110,9 +110,9 @@ pub fn formatted(input: &str) -> String {
 	let mut output = String::new();
 	let count: Vec<_> = input.matches("'").collect();
 	if count.len() >= 0 {
-		output = split_string(input);
+		output = split_string(input).trim().to_string();
 	} else {
-		output = input.split_whitespace().collect::<Vec<&str>>().join(" ");
+		output = input.split_whitespace().collect::<Vec<&str>>().join(" ").trim().to_string();
 	}
 
 	output
