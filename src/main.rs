@@ -20,6 +20,7 @@ fn repl() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let (cmd_type, command, args) = cmd::parse(&input);
+        let args = args.as_str();
 
         match cmd_type {
             cmd::Type::BuiltIn => {

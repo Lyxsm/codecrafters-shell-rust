@@ -16,8 +16,10 @@ pub enum Type {
 	Invalid,
 }
 
-pub fn parse(input: &str) -> (Type, &str, &str) {
-	let (cmd, args) = cmd_split(&input.trim());
+pub fn parse(input: &str) -> (Type, &str, String) {
+	let (cmd, args) = cmd_split(input);
+
+	let args = formatted(args);
 
 	return (cmd_type(cmd), cmd, args);
 }
@@ -102,4 +104,75 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 			None
 		}
 	}
+}
+
+pub fn formatted(input: &str) -> String {
+	let mut output = String::new();
+	let count: Vec<_> = input.matches("'").collect();
+	if count.len() >= 0 {
+		output = split_string(input);
+	} else {
+		output = input.split_whitespace().collect::<Vec<&str>>().join(" ");
+	}
+
+	output
+} 
+
+pub fn single_quotes(input: &str) -> String {
+	let quote: Vec<_> = input.match_indices("'").collect();
+
+	let string = &input[quote[0].0 + 1..quote[1].0];
+	string.to_string()
+}
+
+pub fn split_string(input: &str) -> String {
+	let quotes = find_single_quote_ranges(input);
+	let mut result = String::new();
+	let mut last = 0;
+
+	for (start, end) in quotes {
+		if last < start {
+			let unquoted = input[last..start]
+				.split_whitespace()
+				.collect::<Vec<_>>()
+				.join(" ");
+			result.push_str(&unquoted);
+		}
+
+		let quoted = single_quotes(&input[start..=end]);
+		result.push_str(&quoted);
+
+		last = end + 1;
+	}
+
+	if last < input.len() {
+		let tail = input[last..]
+			.split_whitespace()
+			.collect::<Vec<_>>()
+			.join(" ");
+		result.push_str(&tail);
+	}
+
+	result
+}
+
+pub fn find_single_quote_ranges(input: &str) -> Vec<(usize, usize)> {
+	let mut ranges = Vec::new();
+	let mut start: Option<usize> = None;
+
+	for (i, j) in input.char_indices() {
+		if j == '\'' {
+			match start {
+				None => {
+					start = Some(i);
+				}
+				Some(k) => {
+					ranges.push((k, i));
+					start = None;
+				}
+			}
+		}
+	}
+
+	ranges
 }
