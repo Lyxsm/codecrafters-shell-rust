@@ -42,10 +42,7 @@ fn repl() {
             cmd::Type::PathExec => {
                 match cmd::find_in_path(command) {
                     Some(_path_buf) => {
-                        let mut arguments = Vec::new();
-                        for arg in args.split_whitespace() {
-                            arguments.push(arg);
-                        }
+                        let mut arguments = cmd::parse_args(args);
                         Command::new(command)
                             .args(&arguments)
                             .spawn()

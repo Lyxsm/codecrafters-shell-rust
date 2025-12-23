@@ -183,3 +183,35 @@ pub fn collapse_whitespace(input: &str) -> String {
 
 	result
 }
+
+pub fn parse_args(input: &str) -> Vec<String> {
+	let mut args = Vec::new();
+	let mut current = String::new();
+	let mut in_quotes = false;
+	let mut prev_whitespace = false;
+
+	for ch in input.chars() {
+		match ch {
+			'\'' => {
+				in_quotes = !in_quotes;
+				prev_whitespace = false;
+			}
+			c if c.is_whitespace() && !in_quotes => {
+				if !prev_whitespace && !current.is_empty() {
+					args.push(std::mem::take(&mut current));
+				}
+				prev_whitespace = true;
+			}
+			c => {
+				current.push(c);
+				prev_whitespace = false;
+			}
+		}
+	}
+
+	if !current.is_empty() {
+		args.push(current);
+	}
+
+	args
+}
