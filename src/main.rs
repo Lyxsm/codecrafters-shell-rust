@@ -34,6 +34,7 @@ fn repl() {
                             cmd::Type::Invalid  => println!("{}: not found", args),
                         };
                     },
+                    "cd" => cmd::change_dir(args),
                     _ => println!("Something went wrong!"),
                 }
             },

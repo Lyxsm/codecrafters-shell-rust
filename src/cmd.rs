@@ -2,11 +2,12 @@
 use std::{
 	os::unix::fs::PermissionsExt,
 	path::{Path, PathBuf},
-	env, 
+	env,
+	fs,
 };
 
-pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
-//pub const BUILT_IN: [&str; 3] = ["echo", "exit", "type"];
+pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
+//pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
 #[derive(PartialEq)]
 pub enum Type {
@@ -61,4 +62,51 @@ pub fn get_path_entries() -> Vec<PathBuf> {
 	env::var_os("PATH")
 		.map(|paths| env::split_paths(&paths).collect())
 		.unwrap()
+}
+
+pub fn change_dir(input: &str) {
+	let mut path: PathBuf;
+	let mut dir = input.trim();
+	let mut new_dir = String::new();
+	//match dir.split("/").next() {
+	//	//Some("~") 	=> path = env::home_dir().expect("you are homeless"),
+	//	//Some(".")  	=> path = ".".into(),
+	//	//Some("..") 	=> path = handle_error(fs::canonicalize(".."), "couldn't find directory").unwrap_or(".".into()),
+	//	Some("") 	=> path = "~".into(),
+	//	_ => path = handle_error(fs::canonicalize(dir), "couldn't find directory").unwrap_or(".".into()),
+	//}
+
+	if dir.is_empty() || dir == "~" {
+		path = env::home_dir().expect("you are homeless");
+		env::set_current_dir(&path);
+		return;
+	} else if dir.split("/").next() == Some("~") {
+		new_dir = env::home_dir().expect("you are homeless").to_string_lossy().to_string();
+		let temp = dir.split("/").skip(1);
+		for i in temp {
+			new_dir = new_dir + "/" + i;
+			println!("{}", new_dir);
+		}
+		env::set_current_dir(env::home_dir().expect("you are homeless"));
+		if new_dir.is_empty() {
+			return;
+		} else {
+			change_dir(&new_dir);
+			return;	
+		}
+	} else {
+		path = handle_error(fs::canonicalize(dir), "couldn't find directory").unwrap_or(".".into());
+	}
+
+	env::set_current_dir(&path);
+}
+
+pub fn handle_error<T, E>(result: Result<T, E>, error_message: &str) -> Option<T> {
+	match result {
+		Ok(value) => Some(value),
+		Err(_) => {
+			println!("{}", error_message);
+			None
+		}
+	}
 }
