@@ -108,13 +108,7 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 
 pub fn formatted(input: &str) -> String {
 	let mut output = String::new();
-	let count: Vec<_> = input.matches("'").collect();
-	if count.len() >= 0 {
-		output = split_string(input).trim().to_string();
-	} else {
-		output = input.split_whitespace().collect::<Vec<&str>>().join(" ").trim().to_string();
-	}
-
+	output = split_string(input).trim().to_string();
 	output
 } 
 
