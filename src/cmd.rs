@@ -1,9 +1,12 @@
 #![allow(unused)]
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
-use std::env;
+use std::{
+	os::unix::fs::PermissionsExt,
+	path::{Path, PathBuf},
+	env, 
+};
 
-pub const BUILT_IN: [&str; 3] = ["echo", "exit", "type"];
+pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
+//pub const BUILT_IN: [&str; 3] = ["echo", "exit", "type"];
 
 #[derive(PartialEq)]
 pub enum Type {

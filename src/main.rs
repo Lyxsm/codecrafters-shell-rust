@@ -1,6 +1,10 @@
 #[allow(unused_imports)]
-use std::io::{self, Write};
-use std::process::Command;
+use std::{
+    io::{self, Write},
+    process::Command,
+    path::{self, PathBuf},
+    fs,
+};
 
 mod cmd;
 
@@ -20,13 +24,14 @@ fn repl() {
         match cmd_type {
             cmd::Type::BuiltIn => {
                 match command {
-                    "echo" => println!("{args}"),
-                    "exit" => break,
-                    "type" => {
+                    "echo"  => println!("{args}"),
+                    "exit"  => break,
+                    "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
+                    "type"  => {
                         match cmd::cmd_type(args) {
-                            cmd::Type::BuiltIn => println!("{} is a shell builtin", args),
+                            cmd::Type::BuiltIn  => println!("{} is a shell builtin", args),
                             cmd::Type::PathExec => println!("{} is {}", args, cmd::find_in_path(args).expect("not found").display()),
-                            cmd::Type::Invalid => println!("{}: not found", args),
+                            cmd::Type::Invalid  => println!("{}: not found", args),
                         };
                     },
                     _ => println!("Something went wrong!"),
@@ -34,17 +39,17 @@ fn repl() {
             },
             cmd::Type::PathExec => {
                 match cmd::find_in_path(command) {
-                    Some(path_buf) => {
+                    Some(_path_buf) => {
                         let mut arguments = Vec::new();
                         for arg in args.split_whitespace() {
                             arguments.push(arg);
                         }
                         Command::new(command)
-                        .args(&arguments)
-                        .spawn()
-                        .expect("failed to execute")
-                        .wait()
-                        .expect("failed to wait");
+                            .args(&arguments)
+                            .spawn()
+                            .expect("failed to execute")
+                            .wait()
+                            .expect("failed to wait");
                 },
                     None => println!("{command}: not found"),
                 }
