@@ -122,8 +122,7 @@ pub fn single_quotes(input: &str) -> String {
 	let quote: Vec<_> = input.match_indices("'").collect();
 
 	let string = &input[quote[0].0 + 1..quote[1].0];
-	let string = string.to_string() + " ";
-	string
+	string.to_string()
 }
 
 pub fn split_string(input: &str) -> String {
@@ -133,10 +132,10 @@ pub fn split_string(input: &str) -> String {
 
 	for (start, end) in quotes {
 		if last < start {
-			let unquoted = input[last..start]
-				.split_whitespace()
-				.collect::<Vec<_>>()
-				.join(" ");
+			let unquoted = &input[last..start];
+				//.split_whitespace()
+				//.collect::<Vec<_>>()
+				//.join(" ");
 			result.push_str(&unquoted);
 		}
 
@@ -147,10 +146,10 @@ pub fn split_string(input: &str) -> String {
 	}
 
 	if last < input.len() {
-		let tail = input[last..]
-			.split_whitespace()
-			.collect::<Vec<_>>()
-			.join(" ");
+		let tail = &input[last..];
+			//.split_whitespace()
+			//.collect::<Vec<_>>()
+			//.join(" ");
 		result.push_str(&tail);
 	}
 
