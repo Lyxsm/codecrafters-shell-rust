@@ -109,9 +109,6 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 pub fn parse_args(input: &str) -> Vec<String> {
 	let mut args = Vec::new();
 	let mut current = String::new();
-	let mut in_single_quotes = false;
-	let mut in_double_quotes = false;
-	let mut prev_whitespace = false;
 	
 	let quotes = find_quotes(input);
 	let mut quote_indices: Vec<(usize, usize)> = quotes.into_iter().map(|(start, end, _)| (start, end)).collect();
@@ -133,16 +130,14 @@ pub fn parse_args(input: &str) -> Vec<String> {
 		match ch {
             '\'' | '"' => {
             },
-            c if c.is_whitespace() && !prev_whitespace => {
+            c if c.is_whitespace() => {
                 // Collapse multiple whitespaces into a single one between arguments
                 if !current.is_empty() {
                     args.push(std::mem::take(&mut current)); // Push the current argument when whitespace is found
                 }
-                prev_whitespace = true;
             },
             c => {
-                current.push(c);  // Add character to the current argument
-                prev_whitespace = false;
+                current.push(c);
             },
         }
 	}
