@@ -223,8 +223,8 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 		buf.remove(index);
 	}
 
-	println!("[{}]: {:?}", temp.len(), temp);
-	println!("[{}]: {:?}", buf.len(), buf);
+	//println!("[{}]: {:?}", temp.len(), temp);
+	//println!("[{}]: {:?}", buf.len(), buf);
 
 	let mut result: Vec<(usize, usize, &str)> = Vec::new();
 
@@ -241,7 +241,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 		}
 	}
 
-	println!("{:?}", result);
+	//println!("{:?}", result);
 	result
 }
 
