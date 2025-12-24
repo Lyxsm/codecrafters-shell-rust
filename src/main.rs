@@ -30,7 +30,6 @@ fn repl() {
                             arguments.push_str(&arg);
                             arguments.push_str(" ");
                         }
-                        arguments = arguments.trim().to_string();
                         println!("{arguments}");
                     },
                     "exit"  => break,

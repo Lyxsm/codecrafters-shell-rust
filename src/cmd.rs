@@ -107,86 +107,15 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 }
 
 pub fn formatted(input: &str) -> Vec<String> {
-	let output = split_string(input);
+	let output = parse_args(input);
 	output
-}
-
-pub fn single_quotes(input: &str) -> String {
-	let quote: Vec<_> = input.match_indices("'").collect();
-
-	let string = &input[quote[0].0 + 1..quote[1].0];
-	string.to_string()
-}
-
-pub fn split_string(input: &str) -> Vec<String> {
-	let quotes = find_single_quote_ranges(input);
-	let mut result = Vec::new();
-	let mut last = 0;
-
-	for (start, end) in quotes {
-		if last < start {
-			let unquoted = collapse_whitespace(&input[last..start]);
-			result.push(unquoted);
-		}
-
-		let quoted = single_quotes(&input[start..=end]);
-		result.push(quoted);
-
-		last = end + 1;
-	}
-
-	if last < input.len() {
-		let tail = collapse_whitespace(&input[last..]);
-		result.push(tail);
-	}
-
-	result
-}
-
-pub fn find_single_quote_ranges(input: &str) -> Vec<(usize, usize)> {
-	let mut ranges = Vec::new();
-	let mut start: Option<usize> = None;
-
-	for (i, j) in input.char_indices() {
-		if j == '\'' {
-			match start {
-				None => {
-					start = Some(i);
-				}
-				Some(k) => {
-					ranges.push((k, i));
-					start = None;
-				}
-			}
-		}
-	}
-
-	ranges
-}
-
-pub fn collapse_whitespace(input: &str) -> String {
-	let mut result = String::new();
-	let mut in_whitespace = false;
-
-	for c in input.chars() {
-		if c.is_whitespace() {
-			if !in_whitespace {
-				result.push(' ');
-				in_whitespace = true;
-			}
-		} else {
-			result.push(c);
-			in_whitespace = false;
-		}
-	}
-
-	result
 }
 
 pub fn parse_args(input: &str) -> Vec<String> {
 	let mut args = Vec::new();
 	let mut current = String::new();
 	let mut in_quotes = false;
+	let mut in_double_quotes = false;
 	let mut prev_whitespace = false;
 
 	for ch in input.chars() {
@@ -195,7 +124,11 @@ pub fn parse_args(input: &str) -> Vec<String> {
 				in_quotes = !in_quotes;
 				prev_whitespace = false;
 			}
-			c if c.is_whitespace() && !in_quotes => {
+			'"' => {
+				in_double_quotes = !in_double_quotes;
+				prev_whitespace = false;
+			}
+			c if c.is_whitespace() && (!in_quotes || !in_double_quotes) => {
 				if !prev_whitespace && !current.is_empty() {
 					args.push(std::mem::take(&mut current));
 				}
