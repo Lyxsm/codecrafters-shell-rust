@@ -20,31 +20,35 @@ fn repl() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let (cmd_type, command, args) = cmd::parse(&input);
-        let args = args.as_str();
 
         match cmd_type {
             cmd::Type::BuiltIn => {
                 match command {
-                    "echo"  => println!("{args}"),
+                    "echo"  => {
+                        let mut arguments = String::new();
+                        for arg in args {
+                            arguments.push_str(&arg);
+                        }
+                        println!("{arguments}");
+                    },
                     "exit"  => break,
                     "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
                     "type"  => {
-                        match cmd::cmd_type(args) {
-                            cmd::Type::BuiltIn  => println!("{} is a shell builtin", args),
-                            cmd::Type::PathExec => println!("{} is {}", args, cmd::find_in_path(args).expect("not found").display()),
-                            cmd::Type::Invalid  => println!("{}: not found", args),
+                        match cmd::cmd_type(&args[0]) {
+                            cmd::Type::BuiltIn  => println!("{} is a shell builtin", args[0]),
+                            cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
+                            cmd::Type::Invalid  => println!("{}: not found", args[0]),
                         };
                     },
-                    "cd" => cmd::change_dir(args),
+                    "cd" => cmd::change_dir(&args[0]),
                     _ => println!("Something went wrong!"),
                 }
             },
             cmd::Type::PathExec => {
                 match cmd::find_in_path(command) {
                     Some(_path_buf) => {
-                        let mut arguments = cmd::parse_args(args);
                         Command::new(command)
-                            .args(&arguments)
+                            .args(&args)
                             .spawn()
                             .expect("failed to execute")
                             .wait()

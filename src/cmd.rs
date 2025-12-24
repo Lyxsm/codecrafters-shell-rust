@@ -16,8 +16,8 @@ pub enum Type {
 	Invalid,
 }
 
-pub fn parse(input: &str) -> (Type, &str, String) {
-	let (cmd, args) = cmd_split(input);
+pub fn parse(input: &str) -> (Type, &str, Vec<String>) {
+	let (cmd, args) = cmd_split(input.trim());
 
 	let args = formatted(args);
 
@@ -106,11 +106,10 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 	}
 }
 
-pub fn formatted(input: &str) -> String {
-	let mut output = String::new();
-	output = split_string(input).trim().to_string();
+pub fn formatted(input: &str) -> Vec<String> {
+	let output = split_string(input);
 	output
-} 
+}
 
 pub fn single_quotes(input: &str) -> String {
 	let quote: Vec<_> = input.match_indices("'").collect();
@@ -119,26 +118,26 @@ pub fn single_quotes(input: &str) -> String {
 	string.to_string()
 }
 
-pub fn split_string(input: &str) -> String {
+pub fn split_string(input: &str) -> Vec<String> {
 	let quotes = find_single_quote_ranges(input);
-	let mut result = String::new();
+	let mut result = Vec::new();
 	let mut last = 0;
 
 	for (start, end) in quotes {
 		if last < start {
 			let unquoted = collapse_whitespace(&input[last..start]);
-			result.push_str(&unquoted);
+			result.push(unquoted);
 		}
 
 		let quoted = single_quotes(&input[start..=end]);
-		result.push_str(&quoted);
+		result.push(quoted);
 
 		last = end + 1;
 	}
 
 	if last < input.len() {
 		let tail = collapse_whitespace(&input[last..]);
-		result.push_str(&tail);
+		result.push(tail);
 	}
 
 	result
