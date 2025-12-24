@@ -131,19 +131,7 @@ pub fn parse_args(input: &str) -> Vec<String> {
 		}
 
 		match ch {
-            '\'' => {
-                // Handle single quotes as literal or toggle single_quote flag
-                if !prev_whitespace {
-                    current.push(ch);  // Add literal single quote if it's not part of a quoted string
-                }
-                prev_whitespace = false;
-            },
-            '\"' => {
-                // Handle double quotes as literal or toggle double_quote flag
-                if !prev_whitespace {
-                    current.push(ch);  // Add literal double quote if it's not part of a quoted string
-                }
-                prev_whitespace = false;
+            '\'' | '"' => {
             },
             c if c.is_whitespace() && !prev_whitespace => {
                 // Collapse multiple whitespaces into a single one between arguments
@@ -235,8 +223,8 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 		buf.remove(index);
 	}
 
-	// println!("[{}]: {:?}", temp.len(), temp);
-	// println!("[{}]: {:?}", buf.len(), buf);
+	println!("[{}]: {:?}", temp.len(), temp);
+	println!("[{}]: {:?}", buf.len(), buf);
 
 	let mut result: Vec<(usize, usize, &str)> = Vec::new();
 
@@ -253,7 +241,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 		}
 	}
 
-	// println!("{:?}", result);
+	println!("{:?}", result);
 	result
 }
 
