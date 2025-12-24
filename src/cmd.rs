@@ -19,7 +19,7 @@ pub enum Type {
 pub fn parse(input: &str) -> (Type, &str, Vec<String>) {
 	let (cmd, args) = cmd_split(input.trim());
 
-	let args = formatted(args);
+	let args = parse_args(args);
 
 	return (cmd_type(cmd), cmd, args);
 }
