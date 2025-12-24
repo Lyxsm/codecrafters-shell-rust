@@ -114,30 +114,30 @@ pub fn formatted(input: &str) -> Vec<String> {
 pub fn parse_args(input: &str) -> Vec<String> {
 	let mut args = Vec::new();
 	let mut current = String::new();
-	let mut in_quotes = false;
+	let mut in_single_quotes = false;
 	let mut in_double_quotes = false;
 	let mut prev_whitespace = false;
 
 	for ch in input.chars() {
 		match ch {
 			'\'' => {
-				in_quotes = !in_quotes;
+				in_single_quotes = !in_single_quotes;
 				prev_whitespace = false;
-			}
-			'"' => {
+			},
+			'\"' => {
 				in_double_quotes = !in_double_quotes;
 				prev_whitespace = false;
-			}
-			c if c.is_whitespace() && (!in_quotes || !in_double_quotes) => {
+			},
+			c if c.is_whitespace() && !in_single_quotes && !in_double_quotes => {
 				if !prev_whitespace && !current.is_empty() {
 					args.push(std::mem::take(&mut current));
 				}
 				prev_whitespace = true;
-			}
+			},
 			c => {
 				current.push(c);
 				prev_whitespace = false;
-			}
+			},
 		}
 	}
 
