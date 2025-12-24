@@ -28,7 +28,9 @@ fn repl() {
                         let mut arguments = String::new();
                         for arg in args {
                             arguments.push_str(&arg);
+                            arguments.push_str(" ");
                         }
+                        arguments = arguments.trim().to_string();
                         println!("{arguments}");
                     },
                     "exit"  => break,
