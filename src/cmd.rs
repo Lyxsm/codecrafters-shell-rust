@@ -126,7 +126,7 @@ pub fn parse_args(input: &str) -> Vec<String> {
         if let Some((q_start, q_end, q_type)) = quote_indices.first() {
             if i >= *q_start && i <= *q_end {
                 if i > *q_start && i < *q_end {
-					if ch == '\\' && *q_type == QuoteType::Double {
+					if ch == '\\' && input.chars().nth(i - 1) == Some('"') {
 						escape = true;
 						continue;
 					}
@@ -197,7 +197,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     let mut in_double_quote = false;
 
     for c in input.chars() {
-		if c == '\\' && in_double_quote && !escape {
+		if c == '\\' && in_double_quote {
 			escape = true;
 			i += 1;
 			continue;
