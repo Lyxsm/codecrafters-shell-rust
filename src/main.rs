@@ -23,7 +23,7 @@ fn repl() {
         io::stdin().read_line(&mut input).unwrap();
         let (cmd_type, command, args) = cmd::parse(&input);
 
-        println!("{:?}", args);
+        //eprintln!("{:?}", args);
 
         match cmd_type {
             cmd::Type::BuiltIn => {

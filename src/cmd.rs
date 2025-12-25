@@ -117,19 +117,6 @@ pub fn parse_args(input: &str) -> Vec<String> {
     let mut escape = false;
 
     while let Some((i, ch)) = char_indices.next() {
-        if escape {
-            // If the previous character was an escape, add this character literally
-            current.push(ch);
-            escape = false;
-            continue;
-        }
-
-        if ch == '\\' {
-            // Handle escape character
-            escape = true;
-            continue;
-        }
-
         if let Some((q_start, q_end)) = quote_indices.first() {
             if i >= *q_start && i <= *q_end {
                 if i > *q_start && i < *q_end {
@@ -140,6 +127,19 @@ pub fn parse_args(input: &str) -> Vec<String> {
                 }
                 continue;
             }
+        }
+		
+		if escape {
+            // If the previous character was an escape, add this character literally
+            current.push(ch);
+            escape = false;
+            continue;
+        }
+
+        if ch == '\\' {
+            // Handle escape character
+            escape = true;
+            continue;
         }
 
         match ch {
@@ -171,11 +171,33 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 
     let mut i = 0;
     let mut escape = false;
+    let mut in_single_quote = false;
+    let mut in_double_quote = false;
 
     for c in input.chars() {
         if escape {
             // Skip this character as it is escaped
             escape = false;
+            i += 1;
+            continue;
+        }
+
+        if in_single_quote {
+            if c == '\'' {
+                in_single_quote = false;
+                single_temp.push(i);
+                temp.push(i);
+            }
+            i += 1;
+            continue;
+        }
+
+        if in_double_quote {
+            if c == '"' {
+                in_double_quote = false;
+                double_temp.push(i);
+                temp.push(i);
+            }
             i += 1;
             continue;
         }
@@ -189,16 +211,14 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 
         match c {
             '\'' => {
-                if !escape {
-                    single_temp.push(i);
-                    temp.push(i);
-                }
+                in_single_quote = true;
+                single_temp.push(i);
+                temp.push(i);
             }
             '"' => {
-                if !escape {
-                    double_temp.push(i);
-                    temp.push(i);
-                }
+                in_double_quote = true;
+                double_temp.push(i);
+                temp.push(i);
             }
             _ => {}
         }
