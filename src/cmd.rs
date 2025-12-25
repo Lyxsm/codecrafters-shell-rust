@@ -341,7 +341,10 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
                 .create(true)
                 .append(true)
                 .open(path)?,
-        _ => return Ok(()),
+        _ => {
+            println!("{}", args);
+            return Ok(());
+        },
     };
 
     file.write_all(args.as_bytes())?;
