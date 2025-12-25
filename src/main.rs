@@ -7,6 +7,7 @@ use std::{
 };
 
 mod cmd;
+mod tests;
 
 fn main() {
     repl();
