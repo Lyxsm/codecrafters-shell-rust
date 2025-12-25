@@ -52,7 +52,7 @@ pub fn cmd_split(input: &str) -> (String, String, Option<String>) {
         target = None;
     }
 
-    println!("command: {}", cmd);
+    //println!("command: {}", cmd);
     return (cmd, args, target);
 }
 
