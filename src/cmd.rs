@@ -22,16 +22,27 @@ pub enum QuoteType {
 	Double,
 }
 
-pub fn parse(input: &str) -> (Type, &str, Vec<String>) {
+pub fn parse(input: &str) -> (Type, String, Vec<String>) {
 	let (cmd, args) = cmd_split(input.trim());
 
 	let args = parse_args(args);
 
-	return (cmd_type(cmd), cmd, args);
+	return (cmd_type(cmd.clone()), cmd, args);
 }
 
-pub fn cmd_split(input: &str) -> (&str, &str) {
-	let (cmd, args) = input.split_once(' ').unwrap_or((input, ""));
+pub fn cmd_split(input: &str) -> (String, String) {
+	let mut args: String = String::new();
+	let mut cmd: String = String::new();
+	let mut temp: Vec<&str> = Vec::new();
+	if input.chars().nth(0) == Some('\'') || input.chars().nth(0) == Some('"') {
+		let mut temp = parse_args(input.to_string());
+		cmd = temp[0].clone().trim().to_string();
+		temp.remove(0);
+		args = temp.join(" ");
+		return (cmd, args);
+	}
+	let (command, arg) = input.split_once(' ').unwrap_or((input, "")).into();
+	(cmd, args) = (command.to_string(), arg.to_string());
 	(cmd, args)
 }
 
@@ -41,7 +52,7 @@ pub fn is_executable(path: &Path) -> bool {
 		.unwrap_or(false)
 }
 
-pub fn cmd_type(input: &str) -> Type {
+pub fn cmd_type(input: String) -> Type {
 	let cmd = input.trim();
 
 	if BUILT_IN.contains(&cmd) {
@@ -112,9 +123,10 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 	}
 }
 
-pub fn parse_args(input: &str) -> Vec<String> {
+pub fn parse_args(input: String) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
+	let input = input.as_str();
 
     let quotes = find_quotes(input);
     let quote_ranges: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();

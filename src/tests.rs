@@ -259,14 +259,14 @@ mod tests {
     #[test]
     fn test_parse_args_with_quotes() {
         let input = "echo \"Hello, World!\"";
-        let args = parse_args(input);
+        let args = parse_args(input.to_string());
         assert_eq!(args, vec!["echo".to_string(), "Hello, World!".to_string()]);
     }
 
     #[test]
     fn test_parse_args_with_multiple_spaces() {
         let input = "echo    Hello,    World!";
-        let args = parse_args(input);
+        let args = parse_args(input.to_string());
         assert_eq!(args, vec!["echo".to_string(), "Hello,".to_string(), "World!".to_string()]);
     }
 

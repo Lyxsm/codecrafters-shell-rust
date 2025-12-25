@@ -22,6 +22,7 @@ fn repl() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let (cmd_type, command, args) = cmd::parse(&input);
+        let command = command.as_str();
 
         //eprintln!("{:?}", args);
 
@@ -43,7 +44,7 @@ fn repl() {
                             println!("type: not enough arguments");
                             continue;
                         }
-                        match cmd::cmd_type(&args[0]) {
+                        match cmd::cmd_type(args[0].clone()) {
                             cmd::Type::BuiltIn  => println!("{} is a shell builtin", args[0]),
                             cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
                             cmd::Type::Invalid  => println!("{}: not found", args[0]),
