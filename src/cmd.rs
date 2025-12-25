@@ -16,6 +16,12 @@ pub enum Type {
 	Invalid,
 }
 
+#[derive(PartialEq, Debug)]
+pub enum QuoteType {
+	Single,
+	Double,
+}
+
 pub fn parse(input: &str) -> (Type, &str, Vec<String>) {
 	let (cmd, args) = cmd_split(input.trim());
 
@@ -111,15 +117,33 @@ pub fn parse_args(input: &str) -> Vec<String> {
     let mut current = String::new();
 
     let quotes = find_quotes(input);
-    let mut quote_indices: Vec<(usize, usize)> = quotes.into_iter().map(|(start, end, _)| (start, end)).collect();
+    let mut quote_indices: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
     let mut char_indices = input.char_indices().peekable();
     let mut escape = false;
 
     while let Some((i, ch)) = char_indices.next() {
-        if let Some((q_start, q_end)) = quote_indices.first() {
+        if let Some((q_start, q_end, q_type)) = quote_indices.first() {
             if i >= *q_start && i <= *q_end {
                 if i > *q_start && i < *q_end {
+					if ch == '\\' && *q_type == QuoteType::Double {
+						escape = true;
+						continue;
+					}
+					if escape { 
+						match ch {
+							'"' => current.push('"'),
+							'\\' => current.push('\\'),
+							'n' => current.push('\n'),
+							't' => current.push('\t'),
+							'r' => current.push('\r'),
+							'`' => current.push('`'),
+							'$' => current.push('$'),
+							other => {}
+						}
+						escape = false;
+						continue;
+					}
                     current.push(ch);
                 }
                 if i == *q_end {
@@ -128,16 +152,14 @@ pub fn parse_args(input: &str) -> Vec<String> {
                 continue;
             }
         }
-		
+
 		if escape {
-            // If the previous character was an escape, add this character literally
             current.push(ch);
             escape = false;
             continue;
         }
 
         if ch == '\\' {
-            // Handle escape character
             escape = true;
             continue;
         }
@@ -164,7 +186,7 @@ pub fn parse_args(input: &str) -> Vec<String> {
     args
 }
 
-pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
+pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     let mut single_temp: Vec<usize> = Vec::new();
     let mut double_temp: Vec<usize> = Vec::new();
     let mut temp: Vec<usize> = Vec::new();
@@ -175,13 +197,12 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
     let mut in_double_quote = false;
 
     for c in input.chars() {
-        if escape {
-            // Skip this character as it is escaped
-            escape = false;
-            i += 1;
-            continue;
-        }
-
+		if c == '\\' && in_double_quote {
+			escape = true;
+			i += 1;
+			continue;
+		}
+		
         if in_single_quote {
             if c == '\'' {
                 in_single_quote = false;
@@ -198,13 +219,6 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
                 double_temp.push(i);
                 temp.push(i);
             }
-            i += 1;
-            continue;
-        }
-
-        if c == '\\' {
-            // Set escape flag for the next character
-            escape = true;
             i += 1;
             continue;
         }
@@ -249,22 +263,21 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
         }
     }
 
-    // Ensure unmatched quotes are not included
     if open_single {
-        buf.pop(); // Remove the last unmatched single quote
+        buf.pop(); 
     }
     if open_double {
-        buf.pop(); // Remove the last unmatched double quote
+        buf.pop(); 
     }
 
-    let mut result: Vec<(usize, usize, &str)> = Vec::new();
+    let mut result: Vec<(usize, usize, &str, QuoteType)> = Vec::new();
 
     for idx in (0..buf.len()).step_by(2) {
         if idx + 1 < buf.len() {
             let start = buf[idx];
             let end = buf[idx + 1];
             let string = &input[start..=end];
-            result.push((start, end, string));
+            result.push((start, end, string, if string.starts_with('\'') { QuoteType::Single } else { QuoteType::Double }));
         }
     }
 
