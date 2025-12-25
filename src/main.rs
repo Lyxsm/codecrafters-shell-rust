@@ -1,31 +1,101 @@
-#[allow(unused_imports)]
+#![allow(unused_imports)]
 use std::{
     io::{self, Write},
     process::{Command, Stdio},
     path::{self, PathBuf},
-    fs,
-    env,
+    fs, env,
+};
+#[allow(unused_imports)]
+use crossterm::{
+    ExecutableCommand, cursor, terminal, execute,
+    event::{self, KeyEvent, KeyCode, KeyModifiers},
 };
 
 mod cmd;
 mod tests;
 
 fn main() {
+    terminal::enable_raw_mode().unwrap();
     loop {
+        terminal::disable_raw_mode().unwrap();
         print!("$ ");
         io::stdout().flush().unwrap();
-    
         let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
 
-        if input.split_whitespace().next() == Some("exit") {
-            break;
-        } else if input.trim().is_empty() {
-            continue;
-        } else {
-            execute_cmd(input);
+        let mut event_handled = false;
+        terminal::enable_raw_mode().unwrap();
+
+        'inner: while !event_handled {
+            if event::poll(std::time::Duration::from_millis(100)).unwrap() {
+                if let event::Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
+                    match code {
+                        KeyCode::Esc => break,
+                        KeyCode::Tab => {
+                            let matches: Vec<String> = cmd::BUILT_IN 
+                                .iter()
+                                .filter(|&cmd| cmd.starts_with(&input))
+                                .map(|&cmd| cmd.to_string())
+                                .collect();
+
+                            if matches.len() == 1 {
+                                for ch in input.chars() {
+                                    print!("\x08 \x08");
+                                    io::stdout().flush().unwrap();
+                                }
+                                input.pop();
+                                input = matches[0].clone();
+                                input += " ";
+                                print!("{}", input);
+                                io::stdout().flush().unwrap();
+                            }
+                        },
+                        KeyCode::Enter => {
+                            if input.trim().is_empty() {
+                                //io::stdout().flush().unwrap();
+                                terminal::disable_raw_mode().unwrap();
+                                println!();
+                                break 'inner;
+                            } else if input.trim() == "exit" {
+                                //io::stdout().flush().unwrap();
+                                terminal::disable_raw_mode().unwrap();
+                                println!();
+                                return;
+                            } else {
+                                terminal::disable_raw_mode().unwrap();
+                                println!();
+                                //println!("{}\n", input);
+                                //io::stdout().flush().unwrap();
+                                execute_cmd(input.clone());
+                                //io::stdout().flush().unwrap();
+                                terminal::enable_raw_mode().unwrap();
+                            }
+                            input.clear();
+                            //io::stdout().flush().unwrap();
+                            //terminal::disable_raw_mode().unwrap();
+                            event_handled = true;
+                        },
+                        KeyCode::Backspace => {
+                            if !input.is_empty() {
+                                input.pop();
+                                print!("\x08 \x08");
+                                io::stdout().flush().unwrap();  
+                            }
+                        },
+                        KeyCode::Char(c) => {
+                            input.push(c);
+                            print!("{}", c);
+                            io::stdout().flush().unwrap();
+                        },
+                        _ => {},
+                    }
+                }
+            }
+        //io::stdout().flush().unwrap();
+        //terminal::disable_raw_mode().unwrap();
         }
+        //terminal::disable_raw_mode().unwrap();
     }
+    terminal::disable_raw_mode().unwrap();
 }
 
 fn execute_cmd(input: String) {

@@ -34,7 +34,7 @@ pub enum Target {
 }
 
 pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>) {
-	let (cmd, args, target) = cmd_split(input);
+	let (cmd, args, target) = cmd_split(input.trim());
 
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
@@ -80,6 +80,7 @@ pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>)
         for j in 1..temp.len() {
             args.push(temp[j].clone());
         }
+        //println!("\ncmd: {}\nargs: {:?}", cmd, args);
     }
 
     //println!("command: {}", cmd);
@@ -185,9 +186,9 @@ pub fn parse_args(input: String) -> Vec<String> {
         if escape {
             if let Some(QuoteType::Double) = quote_type {
                 match ch {
-                    //'n' => current.push('\n'),
-                    //'t' => current.push('\t'),
-                    //'r' => current.push('\r'),
+                    'n' => current.push('\n'),
+                    't' => current.push('\t'),
+                    'r' => current.push('\r'),
                     '\\' => current.push('\\'),
                     '"' => current.push('"'),
                     '$' => current.push('$'),
@@ -202,7 +203,14 @@ pub fn parse_args(input: String) -> Vec<String> {
                 current.push(ch);
             } else {
 				// Outside quotes, treat normally
-				current.push(ch);
+                match ch {
+                    'n' => current.push('\n'),
+                    't' => current.push('\t'),
+                    'r' => current.push('\r'),
+                    _ => {
+                        current.push(ch);
+                    }
+                }
 			}
             escape = false;
             continue;
@@ -239,7 +247,6 @@ pub fn parse_args(input: String) -> Vec<String> {
     if !current.is_empty() {
         args.push(current);
     }
-
     args
 }
 
@@ -253,14 +260,12 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
 
     for c in input.chars() {
         if escape {
-            // Skip escaped characters
             escape = false;
             i += 1;
             continue;
         }
 
         if c == '\\' {
-            // Set escape flag for the next character
             escape = true;
             i += 1;
             continue;
@@ -311,9 +316,6 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
         buf.pop(); 
     }
 
-    //println!("[{}]: {:?}", single_temp.len(), single_temp);
-    //println!("[{}]: {:?}", double_temp.len(), double_temp);
-    //println!("[{}]: {:?}", buf.len(), buf);
     let mut result: Vec<(usize, usize, &str, QuoteType)> = Vec::new();
 
     for idx in (0..buf.len()).step_by(2) {
@@ -325,7 +327,6 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
             result.push((start, end, string, quote_type));
         }
     }
-    //println!("[{}]: {:?}", result.len(), result);
 
     result
 }
