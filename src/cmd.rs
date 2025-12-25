@@ -117,71 +117,58 @@ pub fn parse_args(input: &str) -> Vec<String> {
     let mut current = String::new();
 
     let quotes = find_quotes(input);
-    let mut quote_indices: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
+    let quote_ranges: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
     let mut char_indices = input.char_indices().peekable();
     let mut escape = false;
 
     while let Some((i, ch)) = char_indices.next() {
+        // Check if inside a quote
+        let inside_quote = quote_ranges.iter().any(|(start, end, _)| i > *start && i < *end);
+        let quote_type = quote_ranges.iter().find(|(start, end, _)| i > *start && i < *end).map(|(_, _, qt)| qt);
+
+        if escape {
+            if let Some(QuoteType::Double) = quote_type {
+                match ch {
+                    //'n' => current.push('\n'),
+                    //'t' => current.push('\t'),
+                    //'r' => current.push('\r'),
+                    '\\' => current.push('\\'),
+                    '"' => current.push('"'),
+                    '$' => current.push('$'),
+                    _ => {
+                        current.push('\\');
+                        current.push(ch);
+                    }
+                }
+            } else if let Some(QuoteType::Single) = quote_type {
+                // Outside or single quote, \ is literal
+                current.push('\\');
+                current.push(ch);
+            } else {
+				// Outside quotes, treat normally
+				current.push(ch);
+			}
+            escape = false;
+            continue;
+        }
 
         if ch == '\\' {
             escape = true;
             continue;
         }
 
-        if let Some((q_start, q_end, q_type)) = quote_indices.first() {
-            if i >= *q_start && i <= *q_end {
-				if escape && *q_type == QuoteType::Double {
-					match ch {
-						'n' 	=> {
-							current.push('\n');
-						},
-						't' 	=> {
-							current.push('\t');
-						},
-						'r' 	=> {
-							current.push('\r');
-							},
-						'\\' 	=> {
-							current.push('\\');
-						},
-						'"' 	=> {
-							current.push('"');
-						},
-						'$' 	=> {
-							current.push('$');
-						},
-						_ 		=> {	
-							current.push('\\');
-							current.push(ch);
-						},
-					}
-					escape = false;
-					continue;
-				} else if escape && *q_type == QuoteType::Single {
-					current.push('\\');
-					current.push(ch);
-					escape = false;
-					continue;
-				}
-
-				if ch == '\\'  && *q_type == QuoteType::Double {
-					escape = true;
-					continue;
-				}
-                if i > *q_start && i < *q_end {
-                    current.push(ch);
-                }
-                if i == *q_end {
-                    quote_indices.remove(0);
-                }
-                continue;
-            }
+        if inside_quote {
+            current.push(ch);
+            continue;
         }
 
         match ch {
             '\'' | '"' => {
-                current.push(ch);
+                let is_delimiter = quote_ranges.iter().any(|(start, end, _)| i == *start || i == *end);
+                if !is_delimiter {
+                    current.push(ch);
+                }
             }
             c if c.is_whitespace() => {
                 if !current.is_empty() {
