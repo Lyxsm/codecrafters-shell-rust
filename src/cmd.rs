@@ -28,16 +28,16 @@ pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
     let mut j: usize = 0;
     let mut argument = String::new();
     let mut target: Option<String> = None;
+    for i in 0..temp.len() {
+        //println!("[{}]: {}", i, temp[i]);
+    }
 
-    if temp.contains(&String::from(">")) {
+    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
         for i in 0..temp.len() {
-            if temp[i] == ">" {
-                if temp[i - 1] == "1" {
-                    argument = temp[..i - 1].join(" ");
-                } else {
-                    argument = temp[..i].join(" ");
-                }
+            if temp[i] == ">" || temp[i] == "1>" {
+                argument = temp[..i].join(" ");
                 target = Some(temp[i+1..].join(""));
+                //println!("{}\n{}", argument, target.clone().unwrap());
             }
         }
     } else {
@@ -305,6 +305,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
 }
 
 pub fn print_to_file(arguments: String, target: String) -> std::io::Result<()> {
+    //println!("{} >>>>> {}", arguments, target);
     let mut file = OpenOptions::new() 
         .append(true)
         .create(true)

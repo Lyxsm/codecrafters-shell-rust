@@ -74,12 +74,21 @@ fn repl() {
                 match cmd::find_in_path(command) {
                     Some(_path_buf) => {
                         if let Some(ref path) = file_path {
-                            let mut cmd = Command::new(command).args(&args).stdout(Stdio::from(std::fs::File::create(path).expect("failed to create file"))).spawn().expect("failed to execute").wait().expect("failed to wait");
-                        } else {
-                            let mut cmd = Command::new(command).args(&args).spawn()
+                            Command::new(command)
+                                .args(&args)
+                                .stdout(Stdio::from(std::fs::File::create(path).expect("failed to create file")))
+                                .spawn()
                                 .expect("failed to execute")
                                 .wait()
                                 .expect("failed to wait");
+                        } else {
+                            Command::new(command)
+                                .args(&args)
+                                .spawn()
+                                .expect("failed to execute")
+                                .wait()
+                                .expect("failed to wait");
+                            println!();
                         }
                 },
                     None => println!("{command}: not found"),
