@@ -25,45 +25,35 @@ pub enum QuoteType {
 }
 
 pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
-	let mut temp = parse_args(input.trim().to_string());
-    let mut j: usize = 0;
-    let mut argument = String::new();
-    let mut target: Option<String> = None;
-    for i in 0..temp.len() {
-    }
-
-    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
-        for i in 0..temp.len() {
-            if temp[i] == ">" || temp[i] == "1>" {
-                argument = temp[..i].join(" ");
-                target = Some(temp[i+1..].join(""));
-            }
-        }
-    } else {
-        argument = temp.join(" ");
-        target = None;
-    }
-
-    let (cmd, args) = cmd_split(&argument);
+	let (cmd, args, target) = cmd_split(input);
 	let args = parse_args(args);
 
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
 
-pub fn cmd_split(input: &str) -> (String, String) {
-	let mut args = String::new();
-	let mut cmd  = String::new();
-	let mut temp = parse_args(input.to_string());
-	if input.chars().nth(0) == Some('\'') || input.chars().nth(0) == Some('"') {
-		cmd = temp[0].clone().trim().to_string();
-		temp.remove(0);
-		args = temp.join(" ");
-	} else {
-        let (command, arg) = input.split_once(' ').unwrap_or((input, "")).into();
-        (cmd, args) = (command.to_string(), arg.to_string());
+pub fn cmd_split(input: &str) -> (String, String, Option<String>) {
+	let mut temp = parse_args(input.trim().to_string());
+    let mut j: usize = 0;
+    let mut cmd = String::new();
+    let mut args = String::new(); 
+    let mut target: Option<String> = None;
+
+    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
+        for i in 0..temp.len() {
+            if temp[i] == ">" || temp[i] == "1>" {
+                cmd = temp[0].clone();
+                args = temp[1..i].join(" ");
+                target = Some(temp[i+1..].join(""));
+            }
+        }
+    } else {
+        cmd = temp[0].clone();
+        args = temp[1..].join(" ");
+        target = None;
     }
 
-    return (cmd, args);
+    println!("command: {}", cmd);
+    return (cmd, args, target);
 }
 
 pub fn is_executable(path: &Path) -> bool {
@@ -73,7 +63,8 @@ pub fn is_executable(path: &Path) -> bool {
 }
 
 pub fn cmd_type(input: String) -> Type {
-	let cmd = input.trim();
+	//let cmd = input.trim();
+    let cmd = input.as_str();
 
 	if BUILT_IN.contains(&cmd) {
 		return (Type::BuiltIn);
