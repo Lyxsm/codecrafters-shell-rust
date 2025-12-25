@@ -29,7 +29,7 @@ fn repl() {
                 match command {
                     "echo"  => {
                         let mut arguments = String::new();
-                        for arg in args {
+                        for arg in &args {
                             arguments.push_str(&arg);
                             arguments.push_str(" ");
                         }

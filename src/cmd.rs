@@ -5,6 +5,7 @@ use std::{
 	env,
 	fs::{self, OpenOptions},
     io::Write,
+    process::{Stdio, Command},
 };
 
 pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
@@ -35,9 +36,6 @@ pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
         for i in 0..temp.len() {
             if temp[i] == ">" || temp[i] == "1>" {
                 argument = temp[..i].join(" ");
-                let new_line = "\\n";
-                argument += new_line;
-                //println!("{}", argument);
                 target = Some(temp[i+1..].join(""));
             }
         }
@@ -306,11 +304,11 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
 }
 
 pub fn print_to_file(arguments: String, target: String) -> std::io::Result<()> {
-    //println!("{} >>>>> {}", arguments, target);
     let mut file = OpenOptions::new() 
         .append(true)
         .create(true)
         .open(target)?;
     file.write_all(arguments.as_bytes())?;
+    file.write_all(b"\n")?;
     Ok(())
 }
