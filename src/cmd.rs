@@ -28,6 +28,8 @@ pub enum QuoteType {
 pub enum Target {
     Stdout,
     Stderr,
+    StdoutAppend,
+    StderrAppend,
     None,
 }
 
@@ -44,7 +46,7 @@ pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>)
     let mut args = Vec::new(); 
     let mut target: Option<(String, Target)> = None;
 
-    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) || temp.contains(&String::from("2>")) {
+    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) || temp.contains(&String::from("2>")) || temp.contains(&String::from(">>")) || temp.contains(&String::from("1>>")) || temp.contains(&String::from("2>>")) {
         for i in 0..temp.len() {
             if temp[i] == ">" || temp[i] == "1>" {
                 cmd = temp[0].clone();
@@ -55,6 +57,18 @@ pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>)
             } else if temp[i] == "2>" {
                 cmd = temp[0].clone();
                 target = Some((temp[i+1..].join(""), Target::Stderr));
+                for j in 1..i {
+                    args.push(temp[j].clone());
+                }
+            } else if temp[i] == ">>" || temp[i] == "1>>" {
+                cmd = temp[0].clone();
+                target = Some((temp[i+1..].join(""), Target::StdoutAppend));
+                for j in 1..i {
+                    args.push(temp[j].clone());
+                }
+            } else if temp[i] == "2>>" {
+                cmd = temp[0].clone();
+                target = Some((temp[i+1..].join(""), Target::StderrAppend));
                 for j in 1..i {
                     args.push(temp[j].clone());
                 }
@@ -316,12 +330,87 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     result
 }
 
-pub fn print_to_file(arguments: String, target: String) -> std::io::Result<()> {
-    let mut file = OpenOptions::new() 
-        .append(true)
-        .create(true)
-        .open(target)?;
-    file.write_all(arguments.as_bytes())?;
+pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) -> std::io::Result<()> {
+    let mut file = match target_type {
+        Target::Stdout => OpenOptions::new() 
+                .write(true)
+                .create(true)
+                .open(path)?, 
+        Target::StdoutAppend => OpenOptions::new() 
+                .write(true)
+                .create(true)
+                .append(true)
+                .open(path)?,
+        _ => return Ok(()),
+    };
+
+    file.write_all(args.as_bytes())?;
     file.write_all(b"\n")?;
     Ok(())
+}
+
+pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: Target) {
+    match target_type {
+        Target::Stdout => {
+            Command::new(cmd)
+                .args(&args)
+                .stdout(Stdio::from(OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .open(path)
+                    .expect("failed to open file")
+                ))
+                .spawn()
+                .expect("failed to execute")
+                .wait()
+                .expect("failed to wait");
+        },
+        Target::Stderr => {
+            Command::new(cmd)
+                .args(&args)
+                .stderr(Stdio::from(OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .open(path)
+                    .expect("failed to open file")
+                ))
+                .spawn()
+                .expect("failed to execute")
+                .wait()
+                .expect("failed to wait");
+        },
+        Target::StdoutAppend => {
+            Command::new(cmd)
+                .args(&args)
+                .stdout(Stdio::from(OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(&path)
+                    .expect("failed to open file")
+                ))
+                .spawn()
+                .expect("failed to execute")
+                .wait()
+                .expect("failed to wait");
+        },
+        Target::StderrAppend => {
+            Command::new(cmd)
+                .args(&args)
+                .stderr(Stdio::from(OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(&path)
+                    .expect("failed to open file")
+                ))
+                .spawn()
+                .expect("failed to execute")
+                .wait()
+                .expect("failed to wait");
+        },
+        _ => {
+
+        }
+    }
 }

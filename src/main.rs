@@ -11,10 +11,6 @@ mod cmd;
 mod tests;
 
 fn main() {
-    repl();
-}
-
-fn repl() {
     loop {
         print!("$ ");
         io::stdout().flush().unwrap();
@@ -24,12 +20,13 @@ fn repl() {
 
         if input.split_whitespace().next() == Some("exit") {
             break;
+        } else if input.trim().is_empty() {
+            continue;
         } else {
             execute_cmd(input);
         }
     }
 }
-
 
 fn execute_cmd(input: String) {
     let (cmd_type, command, args, target) = cmd::parse(&input);
@@ -45,20 +42,10 @@ fn execute_cmd(input: String) {
                     }
                     if target.is_some() {
                         let target = target.unwrap();
-                        if target.1 == cmd::Target::Stdout {
-                            let error = cmd::print_to_file(arguments, target.0);
-                            match error {
-                                Err(e) => println!("{}", e),
-                                _ => {}
-                            }
-                        } else if target.1 == cmd::Target::Stderr {
-                            Command::new(command)
-                                .args(&args)
-                                .stderr(Stdio::from(std::fs::File::create(target.0).expect("failed to create file")))
-                                .spawn()
-                                .expect("failed to execute")
-                                .wait()
-                                .expect("failed to wait");
+                        let error = cmd::print_to_file_built_in(arguments, &target.0, target.1);
+                        match error {
+                            Err(e) => println!("{e}"),
+                            _ => {},
                         }
                     } else {
                         println!("{arguments}");
@@ -96,23 +83,7 @@ fn execute_cmd(input: String) {
             match cmd::find_in_path(command) {
                 Some(_path_buf) => {
                     if let Some(ref path) = file_path {
-                        if target_type == cmd::Target::Stdout {
-                            Command::new(command)
-                                .args(&args)
-                                .stdout(Stdio::from(std::fs::File::create(path).expect("failed to create file")))
-                                .spawn()
-                                .expect("failed to execute")
-                                .wait()
-                                .expect("failed to wait");
-                            } else if target_type == cmd::Target::Stderr {
-                                Command::new(command)
-                                    .args(&args)
-                                    .stderr(Stdio::from(std::fs::File::create(path).expect("failed to create file")))
-                                    .spawn()
-                                    .expect("failed to execute")
-                                    .wait()
-                                    .expect("failed to wait");
-                            }
+                        cmd::print_to_file(command, args, path, target_type);
                     } else {
                         Command::new(command)
                             .args(&args)
