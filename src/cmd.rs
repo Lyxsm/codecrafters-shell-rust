@@ -341,10 +341,22 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
                 .create(true)
                 .append(true)
                 .open(path)?,
-        _ => {
+        Target::Stderr => {
+            OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(path)?;
             println!("{}", args);
             return Ok(());
-        },
+        }, 
+        Target::StderrAppend => {
+            OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(path)?;
+            println!("{}", args);
+            return Ok(());
+        }
     };
 
     file.write_all(args.as_bytes())?;
