@@ -356,7 +356,8 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
                 .open(path)?;
             println!("{}", args);
             return Ok(());
-        }
+        },
+        _ => return Ok(()),
     };
 
     file.write_all(args.as_bytes())?;
