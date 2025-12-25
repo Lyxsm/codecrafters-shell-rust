@@ -4,6 +4,7 @@ use std::{
     process::Command,
     path::{self, PathBuf},
     fs,
+    env,
 };
 
 mod cmd;
@@ -36,13 +37,23 @@ fn repl() {
                     "exit"  => break,
                     "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
                     "type"  => {
+                        if args.is_empty() {
+                            println!("type: not enough arguments");
+                            continue;
+                        }
                         match cmd::cmd_type(&args[0]) {
                             cmd::Type::BuiltIn  => println!("{} is a shell builtin", args[0]),
                             cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
                             cmd::Type::Invalid  => println!("{}: not found", args[0]),
                         };
                     },
-                    "cd" => cmd::change_dir(&args[0]),
+                    "cd" => {
+                        if args.is_empty() {
+                            cmd::change_dir("~");
+                        } else {
+                            cmd::change_dir(&args[0]);
+                        }
+                    },
                     _ => println!("Something went wrong!"),
                 }
             },

@@ -189,12 +189,16 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 
         match c {
             '\'' => {
-                single_temp.push(i);
-                temp.push(i);
+                if !escape {
+                    single_temp.push(i);
+                    temp.push(i);
+                }
             }
             '"' => {
-                double_temp.push(i);
-                temp.push(i);
+                if !escape {
+                    double_temp.push(i);
+                    temp.push(i);
+                }
             }
             _ => {}
         }
