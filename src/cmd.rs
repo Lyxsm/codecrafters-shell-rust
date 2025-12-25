@@ -24,24 +24,37 @@ pub enum QuoteType {
 	Double,
 }
 
-pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
+#[derive(PartialEq, Debug)]
+pub enum Target {
+    Stdout,
+    Stderr,
+    None,
+}
+
+pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>) {
 	let (cmd, args, target) = cmd_split(input);
 
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
 
-pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<String>) {
+pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>) {
 	let mut temp = parse_args(input.trim().to_string());
     let mut j: usize = 0;
     let mut cmd = String::new();
     let mut args = Vec::new(); 
-    let mut target: Option<String> = None;
+    let mut target: Option<(String, Target)> = None;
 
-    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
+    if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) || temp.contains(&String::from("2>")) {
         for i in 0..temp.len() {
             if temp[i] == ">" || temp[i] == "1>" {
                 cmd = temp[0].clone();
-                target = Some(temp[i+1..].join(""));
+                target = Some((temp[i+1..].join(""), Target::Stdout));
+                for j in 1..i {
+                    args.push(temp[j].clone());
+                }
+            } else if temp[i] == "2>" {
+                cmd = temp[0].clone();
+                target = Some((temp[i+1..].join(""), Target::Stderr));
                 for j in 1..i {
                     args.push(temp[j].clone());
                 }
