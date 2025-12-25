@@ -24,8 +24,6 @@ fn repl() {
         let (cmd_type, command, args, target) = cmd::parse(&input);
         let command = command.as_str();
 
-        //eprintln!("{:?}", args);
-
         match cmd_type {
             cmd::Type::BuiltIn => {
                 match command {
@@ -88,7 +86,6 @@ fn repl() {
                                 .expect("failed to execute")
                                 .wait()
                                 .expect("failed to wait");
-                            println!();
                         }
                 },
                     None => println!("{command}: not found"),

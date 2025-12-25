@@ -29,15 +29,16 @@ pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
     let mut argument = String::new();
     let mut target: Option<String> = None;
     for i in 0..temp.len() {
-        //println!("[{}]: {}", i, temp[i]);
     }
 
     if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
         for i in 0..temp.len() {
             if temp[i] == ">" || temp[i] == "1>" {
                 argument = temp[..i].join(" ");
+                let new_line = "\\n";
+                argument += new_line;
+                //println!("{}", argument);
                 target = Some(temp[i+1..].join(""));
-                //println!("{}\n{}", argument, target.clone().unwrap());
             }
         }
     } else {
