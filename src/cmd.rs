@@ -197,7 +197,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     let mut in_double_quote = false;
 
     for c in input.chars() {
-		if c == '\\' && in_double_quote {
+		if c == '\\' && in_double_quote && !escape {
 			escape = true;
 			i += 1;
 			continue;
