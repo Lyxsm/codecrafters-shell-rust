@@ -26,30 +26,33 @@ pub enum QuoteType {
 
 pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
 	let (cmd, args, target) = cmd_split(input);
-	let args = parse_args(args);
 
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
 
-pub fn cmd_split(input: &str) -> (String, String, Option<String>) {
+pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<String>) {
 	let mut temp = parse_args(input.trim().to_string());
     let mut j: usize = 0;
     let mut cmd = String::new();
-    let mut args = String::new(); 
+    let mut args = Vec::new(); 
     let mut target: Option<String> = None;
 
     if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) {
         for i in 0..temp.len() {
             if temp[i] == ">" || temp[i] == "1>" {
                 cmd = temp[0].clone();
-                args = temp[1..i].join(" ");
                 target = Some(temp[i+1..].join(""));
+                for j in 1..i {
+                    args.push(temp[j].clone());
+                }
             }
         }
     } else {
         cmd = temp[0].clone();
-        args = temp[1..].join(" ");
         target = None;
+        for j in 1..temp.len() {
+            args.push(temp[j].clone());
+        }
     }
 
     //println!("command: {}", cmd);
@@ -140,10 +143,12 @@ pub fn parse_args(input: String) -> Vec<String> {
 	let input = input.as_str();
 
     let quotes = find_quotes(input);
+    println!("{:?}", quotes);
     let quote_ranges: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
     let mut char_indices = input.char_indices().peekable();
     let mut escape = false;
+
 
     while let Some((i, ch)) = char_indices.next() {
         // Check if inside a quote
@@ -279,6 +284,9 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
         buf.pop(); 
     }
 
+    //println!("[{}]: {:?}", single_temp.len(), single_temp);
+    //println!("[{}]: {:?}", double_temp.len(), double_temp);
+    //println!("[{}]: {:?}", buf.len(), buf);
     let mut result: Vec<(usize, usize, &str, QuoteType)> = Vec::new();
 
     for idx in (0..buf.len()).step_by(2) {
@@ -290,6 +298,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
             result.push((start, end, string, quote_type));
         }
     }
+    //println!("[{}]: {:?}", result.len(), result);
 
     result
 }
