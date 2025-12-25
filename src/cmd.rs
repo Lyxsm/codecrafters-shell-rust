@@ -126,7 +126,7 @@ pub fn parse_args(input: &str) -> Vec<String> {
         if let Some((q_start, q_end, q_type)) = quote_indices.first() {
             if i >= *q_start && i <= *q_end {
                 if i > *q_start && i < *q_end {
-					if ch == '\\' && input.chars().nth(i - 1) == Some('"') {
+					if ch == '\\' && input.chars().nth(*q_start) == Some('"') && !escape {
 						escape = true;
 						continue;
 					}
