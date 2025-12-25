@@ -3,7 +3,8 @@ use std::{
 	os::unix::fs::PermissionsExt,
 	path::{Path, PathBuf},
 	env,
-	fs,
+	fs::{self, OpenOptions},
+    io::Write,
 };
 
 pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
@@ -22,28 +23,48 @@ pub enum QuoteType {
 	Double,
 }
 
-pub fn parse(input: &str) -> (Type, String, Vec<String>) {
-	let (cmd, args) = cmd_split(input.trim());
+pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<String>) {
+	let mut temp = parse_args(input.trim().to_string());
+    let mut j: usize = 0;
+    let mut argument = String::new();
+    let mut target: Option<String> = None;
 
+    if temp.contains(&String::from(">")) {
+        for i in 0..temp.len() {
+            if temp[i] == ">" {
+                if temp[i - 1] == "1" {
+                    argument = temp[..i - 1].join(" ");
+                } else {
+                    argument = temp[..i].join(" ");
+                }
+                target = Some(temp[i+1..].join(""));
+            }
+        }
+    } else {
+        argument = temp.join(" ");
+        target = None;
+    }
+
+    let (cmd, args) = cmd_split(&argument);
 	let args = parse_args(args);
 
-	return (cmd_type(cmd.clone()), cmd, args);
+	return (cmd_type(cmd.clone()), cmd, args, target);
 }
 
 pub fn cmd_split(input: &str) -> (String, String) {
-	let mut args: String = String::new();
-	let mut cmd: String = String::new();
-	let mut temp: Vec<&str> = Vec::new();
+	let mut args = String::new();
+	let mut cmd  = String::new();
+	let mut temp = parse_args(input.to_string());
 	if input.chars().nth(0) == Some('\'') || input.chars().nth(0) == Some('"') {
-		let mut temp = parse_args(input.to_string());
 		cmd = temp[0].clone().trim().to_string();
 		temp.remove(0);
 		args = temp.join(" ");
-		return (cmd, args);
-	}
-	let (command, arg) = input.split_once(' ').unwrap_or((input, "")).into();
-	(cmd, args) = (command.to_string(), arg.to_string());
-	(cmd, args)
+	} else {
+        let (command, arg) = input.split_once(' ').unwrap_or((input, "")).into();
+        (cmd, args) = (command.to_string(), arg.to_string());
+    }
+
+    return (cmd, args);
 }
 
 pub fn is_executable(path: &Path) -> bool {
@@ -281,4 +302,13 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     }
 
     result
+}
+
+pub fn print_to_file(arguments: String, target: String) -> std::io::Result<()> {
+    let mut file = OpenOptions::new() 
+        .append(true)
+        .create(true)
+        .open(target)?;
+    file.write_all(arguments.as_bytes())?;
+    Ok(())
 }

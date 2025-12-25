@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use std::{
     io::{self, Write},
-    process::Command,
+    process::{Command, Stdio},
     path::{self, PathBuf},
     fs,
     env,
@@ -21,7 +21,7 @@ fn repl() {
     
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
-        let (cmd_type, command, args) = cmd::parse(&input);
+        let (cmd_type, command, args, target) = cmd::parse(&input);
         let command = command.as_str();
 
         //eprintln!("{:?}", args);
@@ -35,7 +35,16 @@ fn repl() {
                             arguments.push_str(&arg);
                             arguments.push_str(" ");
                         }
-                        println!("{arguments}");
+
+                        if target.is_some() {
+                            let error = cmd::print_to_file(arguments, target.unwrap());
+                            match error {
+                                Err(e) => println!("{}", e),
+                                _ => {}
+                            }
+                        } else {
+                            println!("{arguments}");
+                        }
                     },
                     "exit"  => break,
                     "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
@@ -61,14 +70,17 @@ fn repl() {
                 }
             },
             cmd::Type::PathExec => {
+                let file_path: Option<String> = target;
                 match cmd::find_in_path(command) {
                     Some(_path_buf) => {
-                        Command::new(command)
-                            .args(&args)
-                            .spawn()
-                            .expect("failed to execute")
-                            .wait()
-                            .expect("failed to wait");
+                        if let Some(ref path) = file_path {
+                            let mut cmd = Command::new(command).args(&args).stdout(Stdio::from(std::fs::File::create(path).expect("failed to create file"))).spawn().expect("failed to execute").wait().expect("failed to wait");
+                        } else {
+                            let mut cmd = Command::new(command).args(&args).spawn()
+                                .expect("failed to execute")
+                                .wait()
+                                .expect("failed to wait");
+                        }
                 },
                     None => println!("{command}: not found"),
                 }
