@@ -143,7 +143,7 @@ pub fn parse_args(input: String) -> Vec<String> {
 	let input = input.as_str();
 
     let quotes = find_quotes(input);
-    println!("{:?}", quotes);
+    //println!("{:?}", quotes);
     let quote_ranges: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
     let mut char_indices = input.char_indices().peekable();
