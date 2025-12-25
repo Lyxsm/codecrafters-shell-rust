@@ -16,6 +16,12 @@ pub enum Type {
 	Invalid,
 }
 
+#[derive(PartialEq, Debug)]
+pub enum QuoteType {
+	Single,
+	Double,
+}
+
 pub fn parse(input: &str) -> (Type, &str, Vec<String>) {
 	let (cmd, args) = cmd_split(input.trim());
 
@@ -111,27 +117,58 @@ pub fn parse_args(input: &str) -> Vec<String> {
     let mut current = String::new();
 
     let quotes = find_quotes(input);
-    let mut quote_indices: Vec<(usize, usize)> = quotes.into_iter().map(|(start, end, _)| (start, end)).collect();
+    let mut quote_indices: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
     let mut char_indices = input.char_indices().peekable();
     let mut escape = false;
 
     while let Some((i, ch)) = char_indices.next() {
-        if escape {
-            // If the previous character was an escape, add this character literally
-            current.push(ch);
-            escape = false;
-            continue;
-        }
 
         if ch == '\\' {
-            // Handle escape character
             escape = true;
             continue;
         }
 
-        if let Some((q_start, q_end)) = quote_indices.first() {
+        if let Some((q_start, q_end, q_type)) = quote_indices.first() {
             if i >= *q_start && i <= *q_end {
+				if escape && *q_type == QuoteType::Double {
+					match ch {
+						'n' 	=> {
+							current.push('\n');
+						},
+						't' 	=> {
+							current.push('\t');
+						},
+						'r' 	=> {
+							current.push('\r');
+							},
+						'\\' 	=> {
+							current.push('\\');
+						},
+						'"' 	=> {
+							current.push('"');
+						},
+						'$' 	=> {
+							current.push('$');
+						},
+						_ 		=> {	
+							current.push('\\');
+							current.push(ch);
+						},
+					}
+					escape = false;
+					continue;
+				} else if escape && *q_type == QuoteType::Single {
+					current.push('\\');
+					current.push(ch);
+					escape = false;
+					continue;
+				}
+
+				if ch == '\\'  && *q_type == QuoteType::Double {
+					escape = true;
+					continue;
+				}
                 if i > *q_start && i < *q_end {
                     current.push(ch);
                 }
@@ -164,7 +201,7 @@ pub fn parse_args(input: &str) -> Vec<String> {
     args
 }
 
-pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
+pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
     let mut single_temp: Vec<usize> = Vec::new();
     let mut double_temp: Vec<usize> = Vec::new();
     let mut temp: Vec<usize> = Vec::new();
@@ -174,7 +211,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
 
     for c in input.chars() {
         if escape {
-            // Skip this character as it is escaped
+            // Skip escaped characters
             escape = false;
             i += 1;
             continue;
@@ -225,22 +262,22 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str)> {
         }
     }
 
-    // Ensure unmatched quotes are not included
     if open_single {
-        buf.pop(); // Remove the last unmatched single quote
+        buf.pop(); 
     }
     if open_double {
-        buf.pop(); // Remove the last unmatched double quote
+        buf.pop(); 
     }
 
-    let mut result: Vec<(usize, usize, &str)> = Vec::new();
+    let mut result: Vec<(usize, usize, &str, QuoteType)> = Vec::new();
 
     for idx in (0..buf.len()).step_by(2) {
         if idx + 1 < buf.len() {
             let start = buf[idx];
             let end = buf[idx + 1];
             let string = &input[start..=end];
-            result.push((start, end, string));
+            let quote_type = if &string[0..1] == "'" { QuoteType::Single } else { QuoteType::Double };
+            result.push((start, end, string, quote_type));
         }
     }
 
