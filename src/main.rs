@@ -69,7 +69,7 @@ fn main() {
                                 io::stdout().flush().unwrap();
                                 terminal::enable_raw_mode().unwrap();
                                 input.clear();
-                                //io::stdout().flush().unwrap();
+                                io::stdout().flush().unwrap();
                                 event_handled = true;
                             }
                         },
