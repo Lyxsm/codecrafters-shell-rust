@@ -58,7 +58,6 @@ fn main() {
                             } else if input.trim() == "exit" {
                                 //io::stdout().flush().unwrap();
                                 terminal::disable_raw_mode().unwrap();
-                                println!();
                                 return;
                             } else {
                                 terminal::disable_raw_mode().unwrap();
