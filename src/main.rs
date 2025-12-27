@@ -129,6 +129,7 @@ fn main() {
 fn execute_cmd(input: String) {
     let (cmd_type, command, args, target) = cmd::parse(&input);
     let command = command.as_str();
+    //println!("command: {:?}\targs: {:?}\ttarget: {:?}", command, args, target);
     match cmd_type {
         cmd::Type::BuiltIn => {
             match command {
@@ -138,6 +139,7 @@ fn execute_cmd(input: String) {
                         arguments.push_str(&arg);
                         arguments.push_str(" ");
                     }
+                    //println!("{:?}", arguments);
                     if target.is_some() {
                         let target = target.unwrap();
                         let error = cmd::print_to_file_built_in(arguments, &target.0, target.1);
@@ -146,7 +148,7 @@ fn execute_cmd(input: String) {
                             _ => {},
                         }
                     } else {
-                        println!("{arguments}");
+                        println!("{}", arguments);
                     }
                 },
                 "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
