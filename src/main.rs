@@ -119,8 +119,8 @@ fn main() {
                     }
                 }
             }
-        //io::stdout().flush().unwrap();
-        //terminal::disable_raw_mode().unwrap();
+            io::stdout().flush().unwrap();
+            terminal::disable_raw_mode().unwrap();
         }
         //terminal::disable_raw_mode().unwrap();
     }
