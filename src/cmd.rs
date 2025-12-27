@@ -243,9 +243,7 @@ pub fn parse_args(input: String) -> Vec<String> {
                     //'r' => current.push('\r'),
                     '\'' => current.push('\''),
                     '"' => current.push('"'),
-                    '\\' => current.push('\\'),
                     _ => {
-                        current.push('\\');
                         current.push(ch);
                     }
                 }
