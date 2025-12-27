@@ -128,7 +128,7 @@ fn main() {
 }
 
 fn execute_cmd(input: String) {
-    std::err().flush().unwrap();
+    io::stderr().flush().unwrap();
     let (cmd_type, command, args, target) = cmd::parse(&input);
     let command = command.as_str();
     match cmd_type {
