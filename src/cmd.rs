@@ -399,6 +399,7 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
 }
 
 pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: Target) -> Result <(), Error> {
+    //println!("cmd: {cmd}, args: {args:?}, path: {path}, type: {target_type:?}");
     match target_type {
         Target::Stdout => {
             //println!("1 - 1");

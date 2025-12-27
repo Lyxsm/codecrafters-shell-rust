@@ -66,7 +66,7 @@ fn main() {
                                 //println!("{}\n", input);
                                 //io::stdout().flush().unwrap();
                                 execute_cmd(input.clone());
-                                //io::stdout().flush().unwrap();
+                                io::stdout().flush().unwrap();
                                 terminal::enable_raw_mode().unwrap();
                             }
                             input.clear();
@@ -182,7 +182,7 @@ fn execute_cmd(input: String) {
             match cmd::find_in_path(command) {
                 Some(_path_buf) => {
                     if let Some(ref path) = file_path {
-                        cmd::print_to_file(command, args, path, target_type);
+                        let _= cmd::print_to_file(command, args, path, target_type);
                         //match error {
                         //    Ok(_) => {},
                         //    Err(e) => println!("{:?}", e),
