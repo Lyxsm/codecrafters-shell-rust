@@ -363,7 +363,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
 }
 
 pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) -> std::io::Result<()> {
-    println!("built in");
+    //println!("built in");
     let mut file = match target_type {
         Target::Stdout => OpenOptions::new() 
                 .write(true)
