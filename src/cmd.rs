@@ -169,6 +169,7 @@ pub fn parse_args(input: String) -> Vec<String> {
         for i in 0..string.len() {
             let c = string.chars().nth(i).unwrap();
             if c.is_whitespace() && !in_quote {
+                argument.push(c);
                 arguments.push(argument.clone());
                 argument = String::from(" ");
                 continue;
@@ -194,6 +195,7 @@ pub fn parse_args(input: String) -> Vec<String> {
                 arguments.push(argument.clone());
             }
         }
+        //println!("arguments: {:?}", arguments);
         let mut some_vec = Vec::new();
 
         for mut arg in arguments {
@@ -203,6 +205,7 @@ pub fn parse_args(input: String) -> Vec<String> {
             some_vec.push(arg);
         }
         some_string = some_vec.join("");
+        //println!("{}", some_string);
     }
 
     let mut char_indices = some_string.char_indices().peekable();
