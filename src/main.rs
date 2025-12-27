@@ -112,6 +112,9 @@ fn main() {
                                 io::stdout().flush().unwrap();
                             }
                         },
+                        KeyCode::Up => {
+
+                        },
                         _ => {},
                     }
                 }

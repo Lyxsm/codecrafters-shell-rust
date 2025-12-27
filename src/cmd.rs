@@ -128,7 +128,8 @@ pub fn get_path_entries() -> Vec<PathBuf> {
 }
 
 pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) -> Option<T> {
-	match result {
+	println!("test");
+    match result {
 		Ok(value) => Some(value),
 		Err(_) => {
 			println!("{}: {}", dir, error_message);
