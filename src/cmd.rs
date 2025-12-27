@@ -216,7 +216,7 @@ pub fn parse_args(input: String) -> Vec<String> {
         let inside_quote = quote_ranges.iter().any(|(start, end, _)| i > *start && i < *end);
         let quote_type = quote_ranges.iter().find(|(start, end, _)| i > *start && i < *end).map(|(_, _, qt)| qt);
 
-        //println!("{:?}", current);
+        println!("{:?}", current);
         if escape {
             if let Some(QuoteType::Double) = quote_type {
                 match ch {
@@ -227,7 +227,7 @@ pub fn parse_args(input: String) -> Vec<String> {
                     '"' => current.push('"'),
                     '$' => current.push('$'),
                     _ => {
-                        //current.push('\\');
+                        current.push('\\');
                         current.push(ch);
                     }
                 }
