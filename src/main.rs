@@ -38,7 +38,7 @@ fn main() {
                                 .collect();
 
                             if matches.len() == 1 {
-                                for ch in input.chars() {
+                                for _ch in input.chars() {
                                     print!("\x08 \x08");
                                     io::stdout().flush().unwrap();
                                 }
@@ -95,7 +95,7 @@ fn main() {
         }
         //terminal::disable_raw_mode().unwrap();
     }
-    terminal::disable_raw_mode().unwrap();
+    //terminal::disable_raw_mode().unwrap();
 }
 
 fn execute_cmd(input: String) {
@@ -153,7 +153,11 @@ fn execute_cmd(input: String) {
             match cmd::find_in_path(command) {
                 Some(_path_buf) => {
                     if let Some(ref path) = file_path {
-                        cmd::print_to_file(command, args, path, target_type);
+                        let error = cmd::print_to_file(command, args, path, target_type);
+                        match error {
+                            Ok(_) => {},
+                            Err(e) => println!("{:?}", e),
+                        }
                     } else {
                         Command::new(command)
                             .args(&args)

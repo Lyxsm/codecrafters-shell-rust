@@ -4,7 +4,7 @@ use std::{
 	path::{Path, PathBuf},
 	env,
 	fs::{self, OpenOptions},
-    io::Write,
+    io::{Write, Error},
     process::{Stdio, Command},
 };
 
@@ -34,7 +34,7 @@ pub enum Target {
 }
 
 pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>) {
-	let (cmd, args, target) = cmd_split(input.trim());
+	let (cmd, mut args, target) = cmd_split(input.trim());
 
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
@@ -125,41 +125,11 @@ pub fn get_path_entries() -> Vec<PathBuf> {
 		.unwrap()
 }
 
-pub fn change_dir(input: &str) {
-	let mut path: PathBuf;
-	let mut dir = input.trim();
-	let mut new_dir = String::new();
-
-	if dir.is_empty() || dir == "~" {
-		path = env::home_dir().expect("you are homeless");
-		env::set_current_dir(&path);
-		return;
-	} else if dir.split("/").next() == Some("~") {
-		new_dir = env::home_dir().expect("you are homeless").to_string_lossy().to_string();
-		let temp = dir.split("/").skip(1);
-		for i in temp {
-			new_dir = new_dir + "/" + i;
-			println!("{}", new_dir);
-		}
-		env::set_current_dir(env::home_dir().expect("you are homeless"));
-		if new_dir.is_empty() {
-			return;
-		} else {
-			change_dir(&new_dir);
-			return;	
-		}
-	} else {
-		path = handle_error(dir, fs::canonicalize(dir), "No such file or directory").unwrap_or(".".into());
-	}
-
-	env::set_current_dir(&path);
-}
-
 pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) -> Option<T> {
 	match result {
 		Ok(value) => Some(value),
 		Err(_) => {
-			println!("cd: {}: {}", dir, error_message);
+			println!("{}: {}", dir, error_message);
 			None
 		}
 	}
@@ -168,15 +138,73 @@ pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) 
 pub fn parse_args(input: String) -> Vec<String> {
     let mut args = Vec::new();
     let mut current = String::new();
+    let mut some_string: String = input.clone();
 	let input = input.as_str();
 
     let quotes = find_quotes(input);
-    //println!("{:?}", quotes);
     let quote_ranges: Vec<(usize, usize, QuoteType)> = quotes.into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
 
-    let mut char_indices = input.char_indices().peekable();
-    let mut escape = false;
+    let mut string: &str = "";
+    let other_string = input.split_once(" ");
+    if other_string.is_some() {
+        string = other_string.unwrap().1;
+        let mut cmd = other_string.unwrap().0.to_string();
+        cmd.push_str(" ");
 
+        let quotes_temp: Vec<(usize, usize, QuoteType)> = find_quotes(string).into_iter().map(|(start, end, _, q_type)| (start, end, q_type)).collect();
+        
+        let mut quoted: Vec<usize> = Vec::new();
+        for quote in &quotes_temp {
+            quoted.push(quote.0);
+            quoted.push(quote.1);
+        }
+        
+
+        let mut in_quote = false;
+        let mut arguments: Vec<String> = Vec::new();
+        let mut argument = String::new();
+        arguments.push(cmd);
+        for i in 0..string.len() {
+            let c = string.chars().nth(i).unwrap();
+            if c.is_whitespace() && !in_quote {
+                arguments.push(argument.clone());
+                argument = String::from(" ");
+                continue;
+            }
+            if quoted.contains(&i) {
+                in_quote = !in_quote;
+                if !in_quote {
+                    argument.push(c);
+                    //if !argument.is_empty() { arguments.push(argument) };
+                    arguments.push(argument);
+                    argument = String::new();
+                    continue;
+                } else {
+                    //if !argument.is_empty() { arguments.push(argument) };
+                    arguments.push(argument);
+                    argument = String::from(c);
+                    continue;
+                }
+            }
+            argument.push(c);
+
+            if i == string.len() - 1 {
+                arguments.push(argument.clone());
+            }
+        }
+        let mut some_vec = Vec::new();
+
+        for mut arg in arguments {
+            if is_directory(&arg) {
+                arg = to_directory(&arg).unwrap_or(arg);
+            }
+            some_vec.push(arg);
+        }
+        some_string = some_vec.join("");
+    }
+
+    let mut char_indices = some_string.char_indices().peekable();
+    let mut escape = false;
 
     while let Some((i, ch)) = char_indices.next() {
         // Check if inside a quote
@@ -247,6 +275,7 @@ pub fn parse_args(input: String) -> Vec<String> {
     if !current.is_empty() {
         args.push(current);
     }
+
     args
 }
 
@@ -366,7 +395,7 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
     Ok(())
 }
 
-pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: Target) {
+pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: Target) -> Result <(), Error> {
     match target_type {
         Target::Stdout => {
             Command::new(cmd)
@@ -374,13 +403,12 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .stdout(Stdio::from(OpenOptions::new()
                     .write(true)
                     .create(true)
-                    .open(path)
-                    .expect("failed to open file")
+                    .open(path)?
                 ))
-                .spawn()
-                .expect("failed to execute")
-                .wait()
-                .expect("failed to wait");
+                .spawn()?
+                .wait()?;
+
+                Ok(())
         },
         Target::Stderr => {
             Command::new(cmd)
@@ -388,13 +416,12 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .stderr(Stdio::from(OpenOptions::new()
                     .write(true)
                     .create(true)
-                    .open(path)
-                    .expect("failed to open file")
+                    .open(path)?
                 ))
-                .spawn()
-                .expect("failed to execute")
-                .wait()
-                .expect("failed to wait");
+                .spawn()?
+                .wait()?;
+
+                Ok(())
         },
         Target::StdoutAppend => {
             Command::new(cmd)
@@ -403,13 +430,12 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                     .write(true)
                     .append(true)
                     .create(true)
-                    .open(&path)
-                    .expect("failed to open file")
+                    .open(&path)?
                 ))
-                .spawn()
-                .expect("failed to execute")
-                .wait()
-                .expect("failed to wait");
+                .spawn()?
+                .wait()?;
+
+                Ok(())
         },
         Target::StderrAppend => {
             Command::new(cmd)
@@ -418,16 +444,98 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                     .write(true)
                     .append(true)
                     .create(true)
-                    .open(&path)
-                    .expect("failed to open file")
+                    .open(&path)?
                 ))
-                .spawn()
-                .expect("failed to execute")
-                .wait()
-                .expect("failed to wait");
+                .spawn()?
+                .wait()?;
+
+                Ok(())
         },
         _ => {
-
+            Ok(())
         }
     }
 }
+
+
+pub fn change_dir(input: &str) {
+    let mut path: PathBuf;
+    let mut dir = input.trim();
+    let mut new_dir = String::new();
+
+    if dir.is_empty() || dir == "~" {
+        path = env::home_dir().expect("you are homeless");
+        env::set_current_dir(&path);
+        return;
+    } else if dir.split("/").next() == Some("~") {
+        new_dir = env::home_dir().expect("you are homeless").to_string_lossy().to_string();
+        let temp = dir.split("/").skip(1);
+        for i in temp {
+            new_dir = new_dir + "/" + i;
+            println!("{}", new_dir);
+        }
+        env::set_current_dir(env::home_dir().expect("you are homeless"));
+        if new_dir.is_empty() {
+            return;
+        } else {
+            change_dir(&new_dir);
+            return; 
+        }
+    } else {
+        path = handle_error(dir, fs::canonicalize(dir), "No such file or directory").unwrap_or(".".into());
+    }
+
+    env::set_current_dir(&path);
+}
+
+pub fn is_directory(input: &str) -> bool {
+    let temp = input.trim();
+
+    match temp.chars().next() {
+        Some('~') | Some('/') => return true,
+        Some('.') => {
+            println!("{:?}", temp.chars().nth(1));
+            match temp.chars().nth(1) {
+                Some('/') | Some('.') | None => return true,
+                _ => return false,
+            }
+        },
+        _ => return false,
+    }
+}
+
+pub fn to_directory(input: &str) -> Option<String> {
+    let mut dir = input.trim();
+    
+    if dir.is_empty() {
+        return None;
+    }
+
+    let mut split: Vec<&str> = dir.split("/").collect();
+    let home = env::home_dir().expect("you are homeless").to_string_lossy().to_string();
+
+    if split[0] == "~" {
+        split[0] = home.as_str();
+    }
+
+    let split = split.join("/");
+
+    let path = match fs::canonicalize(split.as_str()) {
+        Ok(result) => Some(result.to_string_lossy().to_string()),
+        Err(e) => None, 
+    };
+
+    return path;
+}
+
+/*
+
+    for i in 0..args.len() {
+        println!("{}", args[i]);
+        match is_directory(&args[i]) {
+            Some(arg) => args[i] = arg,
+            None => {},
+        }
+        println!("{}", args[i]);
+    }
+*/
