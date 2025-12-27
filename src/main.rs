@@ -179,11 +179,11 @@ fn execute_cmd(input: String) {
             match cmd::find_in_path(command) {
                 Some(_path_buf) => {
                     if let Some(ref path) = file_path {
-                        let error = cmd::print_to_file(command, args, path, target_type);
-                        match error {
-                            Ok(_) => {},
-                            Err(e) => println!("{:?}", e),
-                        }
+                        let _error = cmd::print_to_file(command, args, path, target_type);
+                        //match error {
+                        //    Ok(_) => {},
+                        //    Err(e) => println!("{:?}", e),
+                        //}
                     } else {
                         Command::new(command)
                             .args(&args)
