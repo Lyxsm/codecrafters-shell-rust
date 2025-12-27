@@ -523,7 +523,7 @@ pub fn is_directory(input: &str) -> bool {
 }
 
 pub fn to_directory(input: &str) -> Option<String> {
-    let mut dir = input.trim();
+    let mut dir = input;
     
     if dir.is_empty() {
         return None;
