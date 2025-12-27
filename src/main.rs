@@ -61,7 +61,7 @@ fn main() {
                                 println!();
                                 return;
                             } else {
-                                //terminal::disable_raw_mode().unwrap();
+                                terminal::disable_raw_mode().unwrap();
                                 println!();
                                 //println!("{}\n", input);
                                 //io::stdout().flush().unwrap();
@@ -71,7 +71,7 @@ fn main() {
                             }
                             input.clear();
                             //io::stdout().flush().unwrap();
-                            //terminal::disable_raw_mode().unwrap();
+                            terminal::disable_raw_mode().unwrap();
                             event_handled = true;
                         },
                         KeyCode::Backspace => {
@@ -94,13 +94,13 @@ fn main() {
                                     println!();
                                     return;
                                 } else {
-                                    //terminal::disable_raw_mode().unwrap();
+                                    terminal::disable_raw_mode().unwrap();
                                     println!();
                                     //println!("{}\n", input);
                                     //io::stdout().flush().unwrap();
                                     execute_cmd(input.clone());
                                     //io::stdout().flush().unwrap();
-                                    //terminal::enable_raw_mode().unwrap();
+                                    terminal::enable_raw_mode().unwrap();
                                 }
                                 input.clear();
                                 //io::stdout().flush().unwrap();
@@ -128,8 +128,6 @@ fn main() {
 }
 
 fn execute_cmd(input: String) {
-    io::stderr().flush().unwrap();
-    terminal::disable_raw_mode().unwrap();
     let (cmd_type, command, args, target) = cmd::parse(&input);
     let command = command.as_str();
     match cmd_type {
@@ -203,5 +201,4 @@ fn execute_cmd(input: String) {
         },
         _ => println!("{command}: command not found"),
     }
-    terminal::enable_raw_mode().unwrap();
 }
