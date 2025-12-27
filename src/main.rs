@@ -64,15 +64,14 @@ fn main() {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
                                 //println!("{}\n", input);
-                                //io::stdout().flush().unwrap();
+                                io::stdout().flush().unwrap();
                                 execute_cmd(input.clone());
                                 io::stdout().flush().unwrap();
                                 terminal::enable_raw_mode().unwrap();
+                                input.clear();
+                                //io::stdout().flush().unwrap();
+                                event_handled = true;
                             }
-                            input.clear();
-                            //io::stdout().flush().unwrap();
-                            terminal::disable_raw_mode().unwrap();
-                            event_handled = true;
                         },
                         KeyCode::Backspace => {
                             if !input.is_empty() {
