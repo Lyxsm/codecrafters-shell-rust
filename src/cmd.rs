@@ -363,6 +363,7 @@ pub fn find_quotes(input: &str) -> Vec<(usize, usize, &str, QuoteType)> {
 }
 
 pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) -> std::io::Result<()> {
+    println!("built in");
     let mut file = match target_type {
         Target::Stdout => OpenOptions::new() 
                 .write(true)
@@ -400,6 +401,7 @@ pub fn print_to_file_built_in(args: String, path: &String, target_type: Target) 
 pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: Target) -> Result <(), Error> {
     match target_type {
         Target::Stdout => {
+            //println!("1 - 1");
             Command::new(cmd)
                 .args(&args)
                 .stdout(Stdio::from(OpenOptions::new()
@@ -410,9 +412,11 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .spawn()?
                 .wait()?;
 
+                //println!("1 - 2");
                 Ok(())
         },
         Target::Stderr => {
+            //println!("2 - 1");
             Command::new(cmd)
                 .args(&args)
                 .stderr(Stdio::from(OpenOptions::new()
@@ -423,9 +427,11 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .spawn()?
                 .wait()?;
 
+                //println!("2 - 2");
                 Ok(())
         },
         Target::StdoutAppend => {
+            //println!("3 - 1");
             Command::new(cmd)
                 .args(&args)
                 .stdout(Stdio::from(OpenOptions::new()
@@ -437,9 +443,12 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .spawn()?
                 .wait()?;
 
+                //println!("3 - 2");
                 Ok(())
+
         },
         Target::StderrAppend => {
+            //println!("4 - 1");
             Command::new(cmd)
                 .args(&args)
                 .stderr(Stdio::from(OpenOptions::new()
@@ -451,9 +460,12 @@ pub fn print_to_file(cmd: &str, args: Vec<String>, path: &String, target_type: T
                 .spawn()?
                 .wait()?;
 
+                //println!("4 - 2");
                 Ok(())
+
         },
         _ => {
+            //println!("5");
             Ok(())
         }
     }
@@ -496,7 +508,7 @@ pub fn is_directory(input: &str) -> bool {
     match temp.chars().next() {
         Some('~') | Some('/') => return true,
         Some('.') => {
-            println!("{:?}", temp.chars().nth(1));
+            //println!("{:?}", temp.chars().nth(1));
             match temp.chars().nth(1) {
                 Some('/') | Some('.') | None => return true,
                 _ => return false,
@@ -529,15 +541,3 @@ pub fn to_directory(input: &str) -> Option<String> {
 
     return path;
 }
-
-/*
-
-    for i in 0..args.len() {
-        println!("{}", args[i]);
-        match is_directory(&args[i]) {
-            Some(arg) => args[i] = arg,
-            None => {},
-        }
-        println!("{}", args[i]);
-    }
-*/
