@@ -27,7 +27,7 @@ fn main() {
 
         'inner: while !event_handled {
             if event::poll(std::time::Duration::from_millis(100)).unwrap() {
-                if let event::Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
+                if let event::Event::Key(KeyEvent { code, modifiers, .. }) = event::read().unwrap() {
                     match code {
                         KeyCode::Esc => break,
                         KeyCode::Tab => {
@@ -82,9 +82,35 @@ fn main() {
                             }
                         },
                         KeyCode::Char(c) => {
-                            input.push(c);
-                            print!("{}", c);
-                            io::stdout().flush().unwrap();
+                            if modifiers == KeyModifiers::CONTROL && c == 'j' {
+                                if input.trim().is_empty() {
+                                    //io::stdout().flush().unwrap();
+                                    terminal::disable_raw_mode().unwrap();
+                                    println!();
+                                    break 'inner;
+                                } else if input.trim() == "exit" {
+                                    //io::stdout().flush().unwrap();
+                                    terminal::disable_raw_mode().unwrap();
+                                    println!();
+                                    return;
+                                } else {
+                                    terminal::disable_raw_mode().unwrap();
+                                    println!();
+                                    //println!("{}\n", input);
+                                    //io::stdout().flush().unwrap();
+                                    execute_cmd(input.clone());
+                                    //io::stdout().flush().unwrap();
+                                    terminal::enable_raw_mode().unwrap();
+                                }
+                                input.clear();
+                                //io::stdout().flush().unwrap();
+                                //terminal::disable_raw_mode().unwrap();
+                                event_handled = true;
+                            } else {
+                                input.push(c);
+                                print!("{}", c);
+                                io::stdout().flush().unwrap();
+                            }
                         },
                         _ => {},
                     }

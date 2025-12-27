@@ -36,6 +36,8 @@ pub enum Target {
 pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>) {
 	let (cmd, mut args, target) = cmd_split(input.trim());
 
+    //println!("{:?} / {:?} / {:?}", cmd, args, target);
+
 	return (cmd_type(cmd.clone()), cmd, args, target);
 }
 
