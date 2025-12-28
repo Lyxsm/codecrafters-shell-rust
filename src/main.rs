@@ -23,7 +23,6 @@ fn main() {
         if !active(input) {
             return;
         }
-        terminal::disable_raw_mode().unwrap();
     }
 }
 
@@ -38,6 +37,8 @@ fn active(input: String) -> bool {
                 match code {
                     KeyCode::Esc => break,
                     KeyCode::Tab => {
+                        terminal::enable_raw_mode().unwrap();
+                        io::stdout().flush().unwrap();
                         let mut matches = cmd::get_matches(&input);
                         matches.sort();
                         if matches.len() > 1 {
@@ -57,6 +58,7 @@ fn active(input: String) -> bool {
                             //io::stdout().flush().unwrap();
                             terminal::disable_raw_mode().unwrap();
                             println!();
+                            io::stdout().flush().unwrap();
                             event_handled = true;
                         } else if input.trim() == "exit" {
                             terminal::disable_raw_mode().unwrap();
@@ -70,7 +72,6 @@ fn active(input: String) -> bool {
                             execute_cmd(input.clone());
                             io::stdout().flush().unwrap();
                             input.clear();
-                            io::stdout().flush().unwrap();
                             event_handled = true;
                         }
                     },
@@ -78,7 +79,7 @@ fn active(input: String) -> bool {
                         if !input.is_empty() {
                             input.pop();
                             print!("\x08 \x08");
-                            io::stdout().flush().unwrap();  
+                            io::stdout().flush().unwrap();
                         }
                     },
                     KeyCode::Char(c) => {
@@ -231,7 +232,20 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
         return (input, false, true);
-    } 
+    } else if matches.len() == 1 {
+        terminal::disable_raw_mode().unwrap();
+        for _i in 0..input.len() {
+            print!("\x08 \x08");
+            io::stdout().flush().unwrap();
+        }
+        io::stdout().flush().unwrap();
+        input = matches[0].clone();
+        input += " ";
+        print!("{}", input);
+        io::stdout().flush().unwrap();
+        terminal::enable_raw_mode().unwrap();
+        return (input, false, true);
+    }
 
     //else {
     //    terminal::disable_raw_mode().unwrap();
@@ -255,20 +269,7 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
             if let event::Event::Key(KeyEvent { code, modifiers: _, .. }) = event::read().unwrap() {
                 match code {
                     KeyCode::Tab => { 
-                        if matches.len() == 1 {
-                            terminal::disable_raw_mode().unwrap();
-                            for _i in 0..input.len() {
-                                print!("\x08 \x08");
-                                io::stdout().flush().unwrap();
-                            }
-                            io::stdout().flush().unwrap();
-                            input = matches[0].clone();
-                            input += " ";
-                            print!("{}", input);
-                            io::stdout().flush().unwrap();
-                            terminal::enable_raw_mode().unwrap();
-                            return (input, false, true);
-                        } else {
+                        if matches.len() > 1 {
                             terminal::disable_raw_mode().unwrap();
                             println!();
                             for mat in &matches {
