@@ -6,6 +6,7 @@ use std::{
 	fs::{self, OpenOptions},
     io::{Write, Error},
     process::{Stdio, Command},
+    collections::HashSet,
 };
 
 use search_path::SearchPath;
@@ -91,12 +92,6 @@ pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>)
     return (cmd, args, target);
 }
 
-pub fn is_executable(path: &Path) -> bool {
-	path.metadata()
-		.map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
-		.unwrap_or(false)
-}
-
 pub fn cmd_type(input: String) -> Type {
 	//let cmd = input.trim();
     let cmd = input.as_str();
@@ -109,6 +104,12 @@ pub fn cmd_type(input: String) -> Type {
 			None => return (Type::Invalid),
 		}
 	}
+}
+
+pub fn is_executable(path: &Path) -> bool {
+    path.metadata()
+        .map(|m| m.is_file() && (m.permissions().mode() & 0o111 != 0))
+        .unwrap_or(false)
 }
 
 pub fn find_in_path(binary: &str) -> Option<PathBuf> {
@@ -125,43 +126,65 @@ pub fn find_in_path(binary: &str) -> Option<PathBuf> {
 
 pub fn get_path_entries() -> Vec<PathBuf> {
 	env::var_os("PATH")
-		.map(|paths| env::split_paths(&paths).collect())
-		.unwrap()
+		.map(|paths| {
+            env::split_paths(&paths)
+                .filter_map(|dir| {
+                    if dir.is_dir() {
+                        Some(dir)
+                    } else {
+                        None
+                    }
+                }).collect()
+        })
+		.unwrap_or_else(Vec::new)
 }
 
 pub fn partial_path(partial: &str) -> Vec<String> {
-    let mut search_path = SearchPath::new("PATH").expect("Failed to create search path");
-    search_path.dedup();
+    let mut search_paths = get_path_entries();
     let mut matches = Vec::new();
 
-    for dir in search_path.iter() {
-        //println!("{:?}", dir);
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.filter_map(Result::ok) {
-                //println!("{:?}", entry);
-                let file_name = entry.file_name().to_string_lossy().to_string();
-                let file = file_name.split("/");
-                let file_name2 = file.last().unwrap_or(&file_name).to_string();
-                if file_name2.starts_with(partial) {
-                    matches.push(file_name2);
+    for dir in search_paths {
+        match fs::read_dir(&dir) {
+            Ok(entries) => {
+                for entry in entries.filter_map(Result::ok) {
+                    let file_name = entry.file_name();
+                    let file_name = file_name.to_string_lossy();
+                    if file_name.starts_with(partial) {
+                        matches.push(file_name.to_string());
+                    }
                 }
-            }
+            },
+            Err(_) => {
+                continue
+            },
         }
     }
+    matches.sort();
     matches
 }
 
+pub fn get_matches(input: &str) -> Vec<String> {
+    let mut matches: Vec<String> = BUILT_IN 
+            .iter()
+            .filter(|&cmd| cmd.starts_with(&input))
+            .map(|&cmd| cmd.to_string())
+            .collect();
+
+        for candidate in partial_path(&input) {
+            matches.push(candidate);
+        }
+
+        dedup(matches)
+}
+
 pub fn dedup(input: Vec<String>) -> Vec<String> {
-    let mut result = input.clone();
-    'outer: for i in 0..input.len() {
-        for j in i..result.len() {
-            if input[i] == result[j] {
-                result.remove(j);
-                continue 'outer;
-            }
+    let mut seen = HashSet::new();
+    let mut result = Vec::new();
+    for item in input {
+        if seen.insert(item.clone()) {
+            result.push(item);
         }
     }
-    result.sort();
     result
 }
 
