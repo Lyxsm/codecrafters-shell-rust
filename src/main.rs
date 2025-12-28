@@ -234,12 +234,10 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
         print!("\x07");
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
-        io::stdout().flush().unwrap();
         return (input, false, true);
     } else if matches.len() == 1 {
         for _i in 0..input.len() {
             print!("\x08 \x08");
-            io::stdout().flush().unwrap();
         }
         io::stdout().flush().unwrap();
         input = matches[0].clone();
@@ -247,27 +245,25 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
         print!("{}", input);
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
-        io::stdout().flush().unwrap();
         return (input, false, true);
     } else if matches.len() > 1 {
-        let common = longest_common_prefix(&matches);
-        for _i in 0..input.len() {
-            print!("\x08 \x08");
+        matches = cmd::get_matches(&input);
+        let common = longest_common_prefix(&matches); 
+        if input.ends_with('_') {
+            input = common.join("_");
+            let temp = input.clone() + "_";
+            let matches_temp = cmd::get_matches(&temp);
+            if !input.ends_with('_') && matches.len() == matches_temp.len() {
+                input.push('_');
+            }
             io::stdout().flush().unwrap();
         }
-        if !common.is_empty() {
-            input = matches[0].clone();
-            input += "";
-        } else {
-            input = matches[0].clone();
-            input += " ";
-        }
-        print!("{}", input);
-        //println!("\ncommon:{:?}\nmatches: {:?}", common, matches);
+
+        let temp = matches.join("  ");
+        println!("\n{}", temp);
+        print!("$ {}", input);
         io::stdout().flush().unwrap();
-        matches.rotate_left(1);
         terminal::enable_raw_mode().unwrap();
-        io::stdout().flush().unwrap();
     }
 
     loop {
@@ -276,9 +272,8 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
                 match code {
                     KeyCode::Tab => { 
                         if temp_matches.len() > 1 {
-                            temp_matches.remove(0);
-                            let (result, bool1, bool2) = auto_complete(input, temp_matches);    
                             terminal::enable_raw_mode().unwrap();
+                            let (result, bool1, bool2) = auto_complete(input, temp_matches);    
                             io::stdout().flush().unwrap();
                             return (result, bool1, bool2);
                         } else {
@@ -336,6 +331,7 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
                             input.push(c);
                             print!("{}", c);
                             io::stdout().flush().unwrap();
+                            terminal::enable_raw_mode().unwrap();
                             return (input, false, true);
                         }
                     },
@@ -351,10 +347,7 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
 fn longest_common_prefix(matches: &Vec<String>) -> Vec<String> {
     let mut prefixes = HashMap::new();
     for (m, item) in matches.iter().enumerate() {
-        let mut temp: Vec<String> = item.trim().split('_').map(String::from).collect();
-        for i in &mut temp {
-            i.push('_');
-        }
+        let temp: Vec<String> = item.trim().split('_').map(String::from).collect();
         prefixes.insert(m, temp);
     }
     let common = common_strings(&prefixes);
