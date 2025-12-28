@@ -227,7 +227,6 @@ fn execute_cmd(input: String) {
 }
 
 fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, bool) {
-    let mut temp_matches = matches.clone();
 
     terminal::disable_raw_mode().unwrap();
     if matches.is_empty() {
@@ -247,21 +246,39 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
         terminal::enable_raw_mode().unwrap();
         return (input, false, true);
     } else if matches.len() > 1 {
-        matches = cmd::get_matches(&input);
-        let common = longest_common_prefix(&matches); 
-        if input.ends_with('_') {
-            input = common.join("_");
-            let temp = input.clone() + "_";
-            let matches_temp = cmd::get_matches(&temp);
-            if !input.ends_with('_') && matches.len() == matches_temp.len() {
-                input.push('_');
+        let common = longest_common_prefix(&matches);
+        //println!("\n{:?}", matches);
+        if common.len() >= 1 {
+            let mut common_temp = common.clone();
+            let temp = common.join("_");
+            let k = input.len();
+            if k < temp.len() {
+                input = temp.clone();
+            }
+            common_temp.remove(0);
+            if common_temp.is_empty() {
+                let temp = matches.join("  ");
+                print!("\n{}", temp);
+                print!("\n$ {}", input);
+                io::stdout().flush().unwrap();
+            } else {
+                for _i in 0..k {
+                    print!("\x08 \x08");
+                }
+                io::stdout().flush().unwrap();
+                input = common.join("_");
+                print!("{}", input);
+            }
+        } else {
+            for _i in 0..input.len() {
+                print!("\x08 \x08");
             }
             io::stdout().flush().unwrap();
+            print!("{}", input);
         }
-
-        let temp = matches.join("  ");
-        println!("\n{}", temp);
-        print!("$ {}", input);
+        //print!("\t\t{:?}\t{:?}", common, old_matches);
+        //print!("\n{:?}", common);
+        //print!("\n$ {}", input);
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
     }
@@ -271,9 +288,9 @@ fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, 
             if let event::Event::Key(KeyEvent { code, modifiers, .. }) = event::read().unwrap() {
                 match code {
                     KeyCode::Tab => { 
-                        if temp_matches.len() > 1 {
+                        if matches.len() > 1 {
                             terminal::enable_raw_mode().unwrap();
-                            let (result, bool1, bool2) = auto_complete(input, temp_matches);    
+                            let (result, bool1, bool2) = auto_complete(input, matches);    
                             io::stdout().flush().unwrap();
                             return (result, bool1, bool2);
                         } else {
