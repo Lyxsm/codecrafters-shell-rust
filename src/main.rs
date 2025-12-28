@@ -75,16 +75,16 @@ fn active(input: String) -> bool {
                             print!("{}", input);
                             io::stdout().flush().unwrap();
                             terminal::enable_raw_mode().unwrap();
-                        } else if input.len() >= 1 && matches.len() >= 1 {
-                            terminal::disable_raw_mode().unwrap();
-                            println!();
-                            io::stdout().flush().unwrap();
-                            for mat in &matches {
-                                print!("{:?}, ", mat);
-                                io::stdout().flush().unwrap();
-                            }
-                            println!();
-                            terminal::enable_raw_mode().unwrap();
+                        // } else if input.len() >= 1 && matches.len() >= 1 {
+                        //     terminal::disable_raw_mode().unwrap();
+                        //     println!();
+                        //     io::stdout().flush().unwrap();
+                        //     for mat in &matches {
+                        //         print!("{:?}, ", mat);
+                        //         io::stdout().flush().unwrap();
+                        //     }
+                        //     println!();
+                        //     terminal::enable_raw_mode().unwrap();
                         } else if matches.is_empty() {
                             terminal::disable_raw_mode().unwrap();
                             print!("\x07");
