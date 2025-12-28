@@ -170,9 +170,7 @@ pub fn get_matches(input: &str) -> Vec<String> {
             .map(|&cmd| cmd.to_string())
             .collect();
 
-        for candidate in partial_path(&input) {
-            matches.push(candidate);
-        }
+        matches.extend(partial_path(input));
 
         dedup(matches)
 }
