@@ -15,46 +15,116 @@ mod cmd;
 mod tests;
 
 fn main() {
-    terminal::enable_raw_mode().unwrap();
     loop {
-        terminal::disable_raw_mode().unwrap();
         print!("$ ");
         io::stdout().flush().unwrap();
-        let mut input = String::new();
 
-        let mut event_handled = false;
-        terminal::enable_raw_mode().unwrap();
+        let input = String::new();
+        if !active(input) {
+            return;
+        }
+        terminal::disable_raw_mode().unwrap();
+    }
+}
 
-        'inner: while !event_handled {
-            if event::poll(std::time::Duration::from_millis(100)).unwrap() {
-                if let event::Event::Key(KeyEvent { code, modifiers, .. }) = event::read().unwrap() {
-                    match code {
-                        KeyCode::Esc => break,
-                        KeyCode::Tab => {
-                            let matches: Vec<String> = cmd::BUILT_IN 
-                                .iter()
-                                .filter(|&cmd| cmd.starts_with(&input))
-                                .map(|&cmd| cmd.to_string())
-                                .collect();
+fn active(input: String) -> bool {
+    terminal::enable_raw_mode().unwrap();
+    let mut input = input;
+    let mut event_handled = false;
 
-                            if matches.len() == 1 {
-                                for _ch in input.chars() {
-                                    print!("\x08 \x08");
-                                    io::stdout().flush().unwrap();
-                                }
-                                input.pop();
-                                input = matches[0].clone();
-                                input += " ";
-                                print!("{}", input);
-                                io::stdout().flush().unwrap();
-                            } else if matches.is_empty() {
-                                print!("\x07");
+    'inner: while !event_handled {
+        if event::poll(std::time::Duration::from_millis(100)).unwrap() {
+            if let event::Event::Key(KeyEvent { code, modifiers, .. }) = event::read().unwrap() {
+                match code {
+                    KeyCode::Esc => break,
+                    KeyCode::Tab => {
+                        let matches_built_in: Vec<String> = cmd::BUILT_IN 
+                            .iter()
+                            .filter(|&cmd| cmd.starts_with(&input))
+                            .map(|&cmd| cmd.to_string())
+                            .collect();
+
+                        let mut matches_path: Vec<String> = Vec::new();
+                        terminal::disable_raw_mode().unwrap();
+                        for candidate in cmd::partial_path(&input) {
+                            matches_path.push(candidate);
+                        }
+
+                        terminal::enable_raw_mode().unwrap();
+
+                        let mut matches = Vec::new();
+
+                        for m in matches_built_in {
+                            matches.push(m);
+                        }
+                        for p in matches_path {
+                            matches.push(p);
+                        }
+
+                        let matches = cmd::dedup(matches);
+
+                        if matches.len() == 1 {
+                            terminal::disable_raw_mode().unwrap();
+                            for _ch in input.chars() {
+                                print!("\x08 \x08");
                                 io::stdout().flush().unwrap();
                             }
-                        },
-                        KeyCode::Enter => {
+                            input.pop();
+                            input = matches[0].clone();
+                            input += " ";
+                            print!("{}", input);
+                            io::stdout().flush().unwrap();
+                            terminal::enable_raw_mode().unwrap();
+                        } else if input.len() >= 1 && matches.len() >= 1 {
+                            terminal::disable_raw_mode().unwrap();
+                            println!();
+                            io::stdout().flush().unwrap();
+                            for mat in &matches {
+                                print!("{:?}, ", mat);
+                                io::stdout().flush().unwrap();
+                            }
+                            println!();
+                            terminal::enable_raw_mode().unwrap();
+                        } else if matches.is_empty() {
+                            terminal::disable_raw_mode().unwrap();
+                            print!("\x07");
+                            io::stdout().flush().unwrap();
+                            terminal::enable_raw_mode().unwrap();
+                        }
+                    },
+                    KeyCode::Enter => {
+                        if input.trim().is_empty() {
+                            //io::stdout().flush().unwrap();
+                            terminal::disable_raw_mode().unwrap();
+                            println!();
+                            break 'inner;
+                        } else if input.trim() == "exit" {
+                            terminal::disable_raw_mode().unwrap();
+                            println!();
+                            io::stdout().flush().unwrap();
+                            return false;
+                        } else {
+                            terminal::disable_raw_mode().unwrap();
+                            println!();
+                            io::stdout().flush().unwrap();
+                            execute_cmd(input.clone());
+                            io::stdout().flush().unwrap();
+                            input.clear();
+                            io::stdout().flush().unwrap();
+                            event_handled = true;
+                        }
+                    },
+                    KeyCode::Backspace => {
+                        if !input.is_empty() {
+                            input.pop();
+                            print!("\x08 \x08");
+                            io::stdout().flush().unwrap();  
+                        }
+                    },
+                    KeyCode::Char(c) => {
+                        if modifiers == KeyModifiers::CONTROL && c == 'j' {
                             if input.trim().is_empty() {
-                                //io::stdout().flush().unwrap();
+                                io::stdout().flush().unwrap();
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
                                 break 'inner;
@@ -62,7 +132,7 @@ fn main() {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
                                 io::stdout().flush().unwrap();
-                                return;
+                                return false;
                             } else {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
@@ -73,55 +143,24 @@ fn main() {
                                 io::stdout().flush().unwrap();
                                 event_handled = true;
                             }
-                        },
-                        KeyCode::Backspace => {
-                            if !input.is_empty() {
-                                input.pop();
-                                print!("\x08 \x08");
-                                io::stdout().flush().unwrap();  
-                            }
-                        },
-                        KeyCode::Char(c) => {
-                            if modifiers == KeyModifiers::CONTROL && c == 'j' {
-                                if input.trim().is_empty() {
-                                    io::stdout().flush().unwrap();
-                                    terminal::disable_raw_mode().unwrap();
-                                    println!();
-                                    break 'inner;
-                                } else if input.trim() == "exit" {
-                                    terminal::disable_raw_mode().unwrap();
-                                    println!();
-                                    io::stdout().flush().unwrap();
-                                    return;
-                                } else {
-                                    terminal::disable_raw_mode().unwrap();
-                                    println!();
-                                    io::stdout().flush().unwrap();
-                                    execute_cmd(input.clone());
-                                    io::stdout().flush().unwrap();
-                                    input.clear();
-                                    io::stdout().flush().unwrap();
-                                    event_handled = true;
-                                }
-                            } else {
-                                input.push(c);
-                                print!("{}", c);
-                                io::stdout().flush().unwrap();
-                            }
-                        },
-                        KeyCode::Up => {
+                        } else {
+                            input.push(c);
+                            print!("{}", c);
+                            io::stdout().flush().unwrap();
+                        }
+                    },
+                    KeyCode::Up => {
+                    },
+                    _ => {
 
-                        },
-                        _ => {},
-                    }
+                    },
                 }
             }
-            //io::stdout().flush().unwrap();
-            //terminal::disable_raw_mode().unwrap();
-        }
+        }            
+        //io::stdout().flush().unwrap();
         //terminal::disable_raw_mode().unwrap();
     }
-    //terminal::disable_raw_mode().unwrap();
+    return true;
 }
 
 fn execute_cmd(input: String) {

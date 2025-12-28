@@ -8,6 +8,8 @@ use std::{
     process::{Stdio, Command},
 };
 
+use search_path::SearchPath;
+
 pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
 //pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
@@ -125,6 +127,42 @@ pub fn get_path_entries() -> Vec<PathBuf> {
 	env::var_os("PATH")
 		.map(|paths| env::split_paths(&paths).collect())
 		.unwrap()
+}
+
+pub fn partial_path(partial: &str) -> Vec<String> {
+    let mut search_path = SearchPath::new("PATH").expect("Failed to create search path");
+    search_path.dedup();
+    let mut matches = Vec::new();
+
+    for dir in search_path.iter() {
+        //println!("{:?}", dir);
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.filter_map(Result::ok) {
+                //println!("{:?}", entry);
+                let file_name = entry.file_name().to_string_lossy().to_string();
+                let file = file_name.split("/");
+                let file_name2 = file.last().unwrap_or(&file_name).to_string();
+                if file_name2.starts_with(partial) {
+                    matches.push(file_name2);
+                }
+            }
+        }
+    }
+    matches
+}
+
+pub fn dedup(input: Vec<String>) -> Vec<String> {
+    let mut result = input.clone();
+    'outer: for i in 0..input.len() {
+        for j in i..result.len() {
+            if input[i] == result[j] {
+                result.remove(j);
+                continue 'outer;
+            }
+        }
+    }
+    result.sort();
+    result
 }
 
 pub fn handle_error<T, E>(dir: &str, result: Result<T, E>, error_message: &str) -> Option<T> {
