@@ -552,7 +552,7 @@ pub fn change_dir(input: &str) {
         let temp = dir.split("/").skip(1);
         for i in temp {
             new_dir = new_dir + "/" + i;
-            println!("{}", new_dir);
+            //println!("{}", new_dir);
         }
         env::set_current_dir(env::home_dir().expect("you are homeless"));
         if new_dir.is_empty() {
