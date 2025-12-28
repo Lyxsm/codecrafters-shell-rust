@@ -47,6 +47,9 @@ fn main() {
                                 input += " ";
                                 print!("{}", input);
                                 io::stdout().flush().unwrap();
+                            } else if matches.is_empty() {
+                                print!("\x07");
+                                io::stdout().flush().unwrap();
                             }
                         },
                         KeyCode::Enter => {
@@ -56,17 +59,16 @@ fn main() {
                                 println!();
                                 break 'inner;
                             } else if input.trim() == "exit" {
-                                //io::stdout().flush().unwrap();
                                 terminal::disable_raw_mode().unwrap();
+                                println!();
+                                io::stdout().flush().unwrap();
                                 return;
                             } else {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
-                                //println!("{}\n", input);
                                 io::stdout().flush().unwrap();
                                 execute_cmd(input.clone());
                                 io::stdout().flush().unwrap();
-                                terminal::enable_raw_mode().unwrap();
                                 input.clear();
                                 io::stdout().flush().unwrap();
                                 event_handled = true;
@@ -82,27 +84,25 @@ fn main() {
                         KeyCode::Char(c) => {
                             if modifiers == KeyModifiers::CONTROL && c == 'j' {
                                 if input.trim().is_empty() {
-                                    //io::stdout().flush().unwrap();
-                                    //terminal::disable_raw_mode().unwrap();
+                                    io::stdout().flush().unwrap();
+                                    terminal::disable_raw_mode().unwrap();
                                     println!();
                                     break 'inner;
                                 } else if input.trim() == "exit" {
-                                    //io::stdout().flush().unwrap();
-                                    //terminal::disable_raw_mode().unwrap();
+                                    terminal::disable_raw_mode().unwrap();
+                                    println!();
+                                    io::stdout().flush().unwrap();
                                     return;
                                 } else {
                                     terminal::disable_raw_mode().unwrap();
                                     println!();
-                                    //println!("{}\n", input);
-                                    //io::stdout().flush().unwrap();
+                                    io::stdout().flush().unwrap();
                                     execute_cmd(input.clone());
-                                    //io::stdout().flush().unwrap();
-                                    terminal::enable_raw_mode().unwrap();
+                                    io::stdout().flush().unwrap();
+                                    input.clear();
+                                    io::stdout().flush().unwrap();
+                                    event_handled = true;
                                 }
-                                input.clear();
-                                //io::stdout().flush().unwrap();
-                                //terminal::disable_raw_mode().unwrap();
-                                event_handled = true;
                             } else {
                                 input.push(c);
                                 print!("{}", c);
