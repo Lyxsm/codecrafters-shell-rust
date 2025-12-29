@@ -149,31 +149,65 @@ fn active(input: String) -> bool {
 }
 
 fn execute_cmd(input: String) {
-    let (cmd_type, command, args, target) = cmd::parse(&input);
+    let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
     //println!("command: {:?}\targs: {:?}\ttarget: {:?}", command, args, target);
     match cmd_type {
         cmd::Type::BuiltIn => {
             match command {
                 "echo"  => {
-                    let mut arguments = String::new();
-                    for arg in &args {
-                        arguments.push_str(&arg);
-                        arguments.push_str(" ");
-                    }
-                    //println!("{:?}", arguments);
-                    if target.is_some() {
-                        let target = target.unwrap();
-                        let error = cmd::print_to_file_built_in(arguments, &target.0, target.1);
-                        match error {
-                            Err(e) => println!("{e}"),
-                            _ => {},
+                    let arguments: String = args.join(" ");
+                    if let Some(pipe_info) = pipe {
+                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
+                        let output = format!("{}", arguments);
+                        
+                        if let Some(target) = target {
+                            cmd::print_to_file_built_in(output.clone(), &target.0, target.1).unwrap_or_else(|e| println!("{e}"));
+                        } else {
+                            println!("{}", output);
                         }
+
+                        let mut output_cmd = Command::new(piped_cmd)
+                            .args(&piped_args)
+                            .stdin(Stdio::piped())
+                            .spawn()
+                            .expect("Failed to start piped command");
+
+                        if let Some(stdin) = output_cmd.stdin.as_mut() {
+                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
+                        }
+
+                        output_cmd.wait().expect("Piped command was not running");
                     } else {
-                        println!("{}", arguments);
+                        if target.is_some() {
+                            let target = target.unwrap();
+                            cmd::print_to_file_built_in(arguments, &target.0, target.1).expect("Failed to print to file");
+                        } else {
+                            println!("{}", arguments);
+                        }
                     }
                 },
-                "pwd"   => println!("{}", fs::canonicalize(".").expect("failed to retrieve working directory").display()),
+                "pwd"   => {
+                    let current_dir = fs::canonicalize(".").expect("failed to retrieve working directory");
+                    let output = format!("{}", current_dir.display());
+                    if let Some(pipe_info) = pipe {
+                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
+
+                        let mut output_cmd = Command::new(piped_cmd)
+                            .args(&piped_args)
+                            .stdin(Stdio::piped())
+                            .spawn()
+                            .expect("Failed to start piped command");
+
+                        if let Some(stdin) = output_cmd.stdin.as_mut() {
+                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
+                        }
+
+                        output_cmd.wait().expect("Piped command was not running");
+                    } else {
+                        println!("{}", current_dir.display());
+                    }
+                },
                 "type"  => {
                     if args.is_empty() {
                         println!("type: not enough arguments");
@@ -197,10 +231,9 @@ fn execute_cmd(input: String) {
         cmd::Type::PathExec => {
             let mut file_path: Option<String> = None;
             let mut target_type: cmd::Target = cmd::Target::None;
-            if target.is_some() {
-                let file: String;
-                (file, target_type) = target.unwrap();
+            if let Some((file, t)) = target {
                 file_path = Some(file);
+                target_type = t;
             }
             match cmd::find_in_path(command) {
                 Some(_path_buf) => {
@@ -210,13 +243,33 @@ fn execute_cmd(input: String) {
                         //    Ok(_) => {},
                         //    Err(e) => println!("{:?}", e),
                         //}
-                    } else {
-                        Command::new(command)
-                            .args(&args)
-                            .spawn()
-                            .expect("failed to execute")
-                            .wait()
-                            .expect("failed to wait");
+                    } else { 
+                        if let Some(pipe_info) = pipe {
+                            let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
+
+                            let mut child = Command::new(command)
+                                .args(&args)
+                                .stdout(Stdio::piped())
+                                .spawn()
+                                .expect("Failed to execute command");
+
+                            let mut output = Command::new(piped_cmd) 
+                                .args(&piped_args)
+                                .stdin(child.stdout.take().expect("Failed to fetch stdout"))
+                                .spawn()
+                                .expect("Failed to execute piped command");
+
+                            child.wait().expect("Command was not running");
+                            output.wait().expect("Piped command was not running");
+
+                        } else {
+                            Command::new(command)
+                                .args(&args)
+                                .spawn()
+                                .expect("failed to execute")
+                                .wait()
+                                .expect("failed to wait");
+                        }
                     }
             },
                 None => println!("{command}: not found"),
@@ -226,7 +279,7 @@ fn execute_cmd(input: String) {
     }
 }
 
-fn auto_complete(mut input: String, mut matches: Vec<String>) -> (String, bool, bool) {
+fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool) {
 
     terminal::disable_raw_mode().unwrap();
     if matches.is_empty() {

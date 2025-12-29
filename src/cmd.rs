@@ -8,7 +8,6 @@ use std::{
     process::{Stdio, Command},
     collections::HashSet,
 };
-
 use search_path::SearchPath;
 
 pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
@@ -36,12 +35,34 @@ pub enum Target {
     None,
 }
 
-pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>) {
-	let (cmd, mut args, target) = cmd_split(input.trim());
+#[derive(Debug, PartialEq)]
+pub enum Pipeline {
+    Yes,
+    No,
+}
 
-    //println!("{:?} / {:?} / {:?}", cmd, args, target);
+pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>, Option<(Type, String, Vec<String>, Option<(String, Target)>)>) {
+    let mut piped: Option<&str> = None;
+    let mut temp: &str = input;
+    if input.contains("|") {
+        piped = Some(input.split("|").last().unwrap());
+        temp = input.split("|").next().unwrap();
+        //println!("{:?}", piped);
+        //println!("{:?}", temp);
+    }
 
-	return (cmd_type(cmd.clone()), cmd, args, target);
+    if let Some(string) = piped {
+        let (cmd, args, target) = cmd_split(temp.trim());
+        let (piped_cmd, piped_args, piped_target) = cmd_split(piped.unwrap().trim());
+        //println!("\nCOMMAND:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n\nPIPED:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n", cmd_type(cmd.clone()), cmd, args, target, cmd_type(piped_cmd.clone()), piped_cmd, piped_args, piped_target);
+        return (cmd_type(cmd.clone()), cmd, args, target, Some((cmd_type(piped_cmd.clone()), piped_cmd, piped_args, piped_target)));
+
+    } else {
+        let (cmd, mut args, target) = cmd_split(input.trim());
+        //println!("\nCOMMAND:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n", cmd_type(cmd.clone()), cmd, args, target);
+        return (cmd_type(cmd.clone()), cmd, args, target, None); 
+    }
+
 }
 
 pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>) {
@@ -89,6 +110,7 @@ pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>)
     }
 
     //println!("command: {}", cmd);
+    //println!("\ncmd: {}\nargs: {:?}\ntarget: {:?}", cmd, args, target);
     return (cmd, args, target);
 }
 
