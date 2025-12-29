@@ -159,13 +159,7 @@ fn execute_cmd(input: String) {
                     let arguments: String = args.join(" ");
                     if let Some(pipe_info) = pipe {
                         let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
-                        let output = format!("{}", arguments);
-                        
-                        if let Some(target) = target {
-                            cmd::print_to_file_built_in(output.clone(), &target.0, target.1).unwrap_or_else(|e| println!("{e}"));
-                        } else {
-                            println!("{}", output);
-                        }
+                        let output = format!("{}\n", arguments);
 
                         let mut output_cmd = Command::new(piped_cmd)
                             .args(&piped_args)
