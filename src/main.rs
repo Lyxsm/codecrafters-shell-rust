@@ -212,11 +212,35 @@ fn execute_cmd(input: String) {
                     if args.is_empty() {
                         println!("type: not enough arguments");
                     }
+                    let output;
                     match cmd::cmd_type(args[0].clone()) {
-                        cmd::Type::BuiltIn  => println!("{} is a shell builtin", args[0]),
-                        cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
-                        cmd::Type::Invalid  => println!("{}: not found", args[0]),
-                    };
+                        cmd::Type::BuiltIn => {
+                            output = format!("{} is a shell builtin", args[0]);
+                        }, 
+                        cmd::Type::PathExec => {
+                            output = format!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display());
+                        },
+                        cmd::Type::Invalid => {
+                            output = format!("{}: not found", args[0]);
+                        },
+                    }
+                    if let Some(pipe_info) = pipe {
+                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
+
+                        let mut output_cmd = Command::new(piped_cmd)
+                            .args(&piped_args)
+                            .stdin(Stdio::piped())
+                            .spawn()
+                            .expect("Failed to start piped command");
+
+                        if let Some(stdin) = output_cmd.stdin.as_mut() {
+                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
+                        }
+
+                        output_cmd.wait().expect("Piped command was not running");
+                    } else {
+                        println!("{}", output);
+                    }
                 },
                 "cd" => {
                     if args.is_empty() {
@@ -247,21 +271,26 @@ fn execute_cmd(input: String) {
                         if let Some(pipe_info) = pipe {
                             let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
 
-                            let mut child = Command::new(command)
-                                .args(&args)
-                                .stdout(Stdio::piped())
-                                .spawn()
-                                .expect("Failed to execute command");
+                            if cmd::BUILT_IN.contains(&piped_cmd.as_str()) {
+                                let mut pipe = piped_args.join(" ");
+                                pipe = piped_cmd + " " + &pipe;
+                                execute_cmd(pipe);
+                            } else {
+                                let mut child = Command::new(command)
+                                    .args(&args)
+                                    .stdout(Stdio::piped())
+                                    .spawn()
+                                    .expect("Failed to execute command");
 
-                            let mut output = Command::new(piped_cmd) 
-                                .args(&piped_args)
-                                .stdin(child.stdout.take().expect("Failed to fetch stdout"))
-                                .spawn()
-                                .expect("Failed to execute piped command");
+                                let mut output = Command::new(piped_cmd) 
+                                    .args(&piped_args)
+                                    .stdin(child.stdout.take().expect("Failed to fetch stdout"))
+                                    .spawn()
+                                    .expect("Failed to execute piped command");
 
-                            child.wait().expect("Command was not running");
-                            output.wait().expect("Piped command was not running");
-
+                                child.wait().expect("Command was not running");
+                                output.wait().expect("Piped command was not running");
+                            }
                         } else {
                             Command::new(command)
                                 .args(&args)
