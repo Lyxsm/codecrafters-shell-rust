@@ -13,20 +13,20 @@ use search_path::SearchPath;
 pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
 //pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Type {
 	BuiltIn,
 	PathExec,
 	Invalid,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum QuoteType {
 	Single,
 	Double,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Target {
     Stdout,
     Stderr,
@@ -35,41 +35,25 @@ pub enum Target {
     None,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Pipeline {
-    Yes,
-    No,
-}
-
-pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>, Option<(Type, String, Vec<String>, Option<(String, Target)>)>) {
-    let mut piped: Option<&str> = None;
-    let mut temp: &str = input;
-    if input.contains("|") {
-        piped = Some(input.split("|").last().unwrap());
-        temp = input.split("|").next().unwrap();
-        //println!("{:?}", piped);
-        //println!("{:?}", temp);
+pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)>, Option<Vec<String>>) {
+    let mut piped_vec: Option<Vec<String>> = None;
+    let mut temp = input;
+    
+    if input.contains('|') {
+        let parts: Vec<String> = input.split('|').map(|s| s.trim().to_string()).collect();
+        piped_vec = Some(parts.clone());
+        temp = input.split('|').next().unwrap();
     }
-
-    if let Some(string) = piped {
-        let (cmd, args, target) = cmd_split(temp.trim());
-        let (piped_cmd, piped_args, piped_target) = cmd_split(piped.unwrap().trim());
-        //println!("\nCOMMAND:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n\nPIPED:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n", cmd_type(cmd.clone()), cmd, args, target, cmd_type(piped_cmd.clone()), piped_cmd, piped_args, piped_target);
-        return (cmd_type(cmd.clone()), cmd, args, target, Some((cmd_type(piped_cmd.clone()), piped_cmd, piped_args, piped_target)));
-
-    } else {
-        let (cmd, mut args, target) = cmd_split(input.trim());
-        //println!("\nCOMMAND:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n", cmd_type(cmd.clone()), cmd, args, target);
-        return (cmd_type(cmd.clone()), cmd, args, target, None); 
-    }
-
+    let (cmd, mut args, target) = cmd_split(temp.trim());
+    //println!("\nCOMMAND:\ntype:\t{:?}\ncmd:\t{:?}\nargs:\t{:?}\ntarget:\t{:?}\n", cmd_type(cmd.clone()), cmd, args, target);
+    return (cmd_type(cmd.clone()), cmd, args, target, piped_vec); 
 }
 
 pub fn cmd_split(input: &str) -> (String, Vec<String>, Option<(String, Target)>) {
 	let mut temp = parse_args(input.trim().to_string());
     let mut j: usize = 0;
     let mut cmd = String::new();
-    let mut args = Vec::new(); 
+    let mut args = Vec::new();  
     let mut target: Option<(String, Target)> = None;
 
     if temp.contains(&String::from(">")) || temp.contains(&String::from("1>")) || temp.contains(&String::from("2>")) || temp.contains(&String::from(">>")) || temp.contains(&String::from("1>>")) || temp.contains(&String::from("2>>")) {

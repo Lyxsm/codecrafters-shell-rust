@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::{
-    io::{self, Write},
+    io::{self, Write, Read},
     process::{Command, Stdio},
     path::{self, PathBuf},
     fs, env, slice,
@@ -152,139 +152,54 @@ fn execute_cmd(input: String) {
     let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
     //println!("command: {:?}\targs: {:?}\ttarget: {:?}", command, args, target);
-    match cmd_type {
-        cmd::Type::BuiltIn => {
-            match command {
-                "echo"  => {
-                    let arguments: String = args.join(" ");
-                    if let Some(pipe_info) = pipe {
-                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
-                        let output = format!("{}\n", arguments);
-
-                        let mut output_cmd = Command::new(piped_cmd)
-                            .args(&piped_args)
-                            .stdin(Stdio::piped())
-                            .spawn()
-                            .expect("Failed to start piped command");
-
-                        if let Some(stdin) = output_cmd.stdin.as_mut() {
-                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
-                        }
-
-                        output_cmd.wait().expect("Piped command was not running");
-                    } else {
-                        if target.is_some() {
-                            let target = target.unwrap();
-                            cmd::print_to_file_built_in(arguments, &target.0, target.1).expect("Failed to print to file");
+    if pipe.is_none() {
+        match cmd_type {
+            cmd::Type::BuiltIn => {
+                match command {
+                    "echo" => {
+                        let arguments: String = args.join(" ");
+                        if let Some((file, t)) = target {
+                            cmd::print_to_file_built_in(arguments, &file, t).expect("Failed to print to file");
                         } else {
                             println!("{}", arguments);
                         }
-                    }
-                },
-                "pwd"   => {
-                    let current_dir = fs::canonicalize(".").expect("failed to retrieve working directory");
-                    let output = format!("{}", current_dir.display());
-                    if let Some(pipe_info) = pipe {
-                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
-
-                        let mut output_cmd = Command::new(piped_cmd)
-                            .args(&piped_args)
-                            .stdin(Stdio::piped())
-                            .spawn()
-                            .expect("Failed to start piped command");
-
-                        if let Some(stdin) = output_cmd.stdin.as_mut() {
-                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
-                        }
-
-                        output_cmd.wait().expect("Piped command was not running");
-                    } else {
+                    },
+                    "pwd" => {
+                        let current_dir = fs::canonicalize(".").expect("Failed to retrieve working directory");
                         println!("{}", current_dir.display());
-                    }
-                },
-                "type"  => {
-                    if args.is_empty() {
-                        println!("type: not enough arguments");
-                    }
-                    let output;
-                    match cmd::cmd_type(args[0].clone()) {
-                        cmd::Type::BuiltIn => {
-                            output = format!("{} is a shell builtin", args[0]);
-                        }, 
-                        cmd::Type::PathExec => {
-                            output = format!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display());
-                        },
-                        cmd::Type::Invalid => {
-                            output = format!("{}: not found", args[0]);
-                        },
-                    }
-                    if let Some(pipe_info) = pipe {
-                        let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
-
-                        let mut output_cmd = Command::new(piped_cmd)
-                            .args(&piped_args)
-                            .stdin(Stdio::piped())
-                            .spawn()
-                            .expect("Failed to start piped command");
-
-                        if let Some(stdin) = output_cmd.stdin.as_mut() {
-                            stdin.write_all(output.as_bytes()).expect("Failed to write to piped command");
-                        }
-
-                        output_cmd.wait().expect("Piped command was not running");
-                    } else {
-                        println!("{}", output);
-                    }
-                },
-                "cd" => {
-                    if args.is_empty() {
-                        cmd::change_dir("~");
-                    } else {
-                        cmd::change_dir(&args[0]);
-                    }
-                },
-                _ => println!("Something went wrong!"),
-            }
-        },
-        cmd::Type::PathExec => {
-            let mut file_path: Option<String> = None;
-            let mut target_type: cmd::Target = cmd::Target::None;
-            if let Some((file, t)) = target {
-                file_path = Some(file);
-                target_type = t;
-            }
-            match cmd::find_in_path(command) {
-                Some(_path_buf) => {
-                    if let Some(ref path) = file_path {
-                        let _= cmd::print_to_file(command, args, path, target_type);
-                        //match error {
-                        //    Ok(_) => {},
-                        //    Err(e) => println!("{:?}", e),
-                        //}
-                    } else { 
-                        if let Some(pipe_info) = pipe {
-                            let (_piped_cmd_type, piped_cmd, piped_args, _piped_target) = pipe_info;
-
-                            if cmd::BUILT_IN.contains(&piped_cmd.as_str()) {
-                                let mut pipe = piped_args.join(" ");
-                                pipe = piped_cmd + " " + &pipe;
-                                execute_cmd(pipe);
-                            } else {
-                                let mut child = Command::new(command)
-                                    .args(&args)
-                                    .stdout(Stdio::piped())
-                                    .spawn()
-                                    .expect("Failed to execute command");
-
-                                let mut output = Command::new(piped_cmd) 
-                                    .args(&piped_args)
-                                    .stdin(child.stdout.take().expect("Failed to fetch stdout"))
-                                    .spawn()
-                                    .expect("Failed to execute piped command");
-
-                                child.wait().expect("Command was not running");
-                                output.wait().expect("Piped command was not running");
+                    },
+                    "type" => {
+                        if args.is_empty() {
+                            println!("type: not enough arguments");
+                        } else {
+                            match cmd::cmd_type(args[0].clone()) {
+                                cmd::Type::BuiltIn => println!("{} is a shell builtin", args[0]),
+                                cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
+                                cmd::Type::Invalid => println!("{}: not found", args[0]),
                             }
+                        }
+                    },
+                    "cd" => {
+                        if args.is_empty() {
+                            cmd::change_dir("~");
+                        } else {
+                            cmd::change_dir(&args[0]);
+                        }
+                    },
+                    _ => println!("Something went wrong!"),
+                }
+            },
+            cmd::Type::PathExec => {
+                let mut file_path: Option<String> = None;
+                let mut target_type: cmd::Target = cmd::Target::None;
+                if let Some((file, t)) = target {
+                    file_path = Some(file);
+                    target_type = t;
+                }
+                match cmd::find_in_path(command) {
+                    Some(_path_buf) => {
+                        if let Some(ref path) = file_path {
+                            let _ = cmd::print_to_file(command, args, path, target_type);
                         } else {
                             Command::new(command)
                                 .args(&args)
@@ -293,12 +208,112 @@ fn execute_cmd(input: String) {
                                 .wait()
                                 .expect("failed to wait");
                         }
-                    }
+                    },
+                    None => println!("{}: not found", command),
+                }
             },
-                None => println!("{command}: not found"),
-            }
+            _ => println!("{}: command not found", command)
+        }
+        return;
+    }
+
+    let pipes = pipe.unwrap();
+
+    let mut segments: Vec<(cmd::Type, String, Vec<String>, Option<(String, cmd::Target)>)> = Vec::new();
+
+    for seg in &pipes {
+        let parsed = cmd::parse(seg);
+        segments.push((parsed.0, parsed.1, parsed.2, parsed.3));
+    }
+
+    let initial_output: Option<Vec<u8>> = match cmd_type {
+        cmd::Type::BuiltIn => {
+            let output = run_builtin(command, &args, &target);
+            Some(output.into_bytes())
         },
-        _ => println!("{command}: command not found"),
+        cmd::Type::PathExec => {
+            let mut child = Command::new(command)
+                .args(&args)
+                .stdout(Stdio::piped())
+                .spawn()
+                .expect("Failed to execute command");
+
+            let mut buf = Vec::new();
+            if let Some(mut stdout) = child.stdout.take() {
+                stdout.read_to_end(&mut buf).expect("Failed to read stdout");
+            }
+            child.wait().expect("Command was not running");
+            Some(buf)
+        },
+        _ => None,
+    };
+
+    let mut current_data = initial_output.unwrap_or_default();
+
+    for (idx, (seg_type, seg_cmd, seg_args, seg_target)) in segments.into_iter().enumerate() {
+        let seg_cmd_str = seg_cmd.as_str();
+
+        match seg_type {
+            cmd::Type::BuiltIn => {
+                let stdin_string = String::from_utf8_lossy(&current_data).to_string();
+                let output = run_builtin_stdin(&seg_cmd, &seg_args, &seg_target, &stdin_string);
+                current_data = output.into_bytes();
+            },
+            cmd::Type::PathExec => {
+                let mut child = Command::new(seg_cmd_str)
+                    .args(&seg_args)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()
+                    .expect("Failed to start piped command");
+
+                if let Some(mut stdin) = child.stdin.take() {
+                    stdin.write_all(&current_data).expect("Failed to write to piped command stdin");
+                }
+
+                let mut buf = Vec::new();
+                if let Some(mut stdout) = child.stdout.take() {
+                    stdout.read_to_end(&mut buf).expect("Failed to read piped stdout");
+                }
+                child.wait().expect("Piped command was not running");
+                current_data = buf;
+            },
+            _ => {}
+        }
+
+        if idx == pipes.len() - 1 {
+            if let Some((ref file, t)) = seg_target {
+                match seg_type {
+                    cmd::Type::PathExec => {
+                        let _ = cmd::print_to_file(&seg_cmd, seg_args.clone(), file, t.clone());
+                    },
+                    cmd::Type::BuiltIn => {
+                        let mut options = std::fs::OpenOptions::new();
+                        options.create(true).write(true);
+
+                        if t == cmd::Target::StdoutAppend || t == cmd::Target::StderrAppend {
+                            options.append(true); 
+                        } else {
+                            options.truncate(true);
+                        }
+
+                        let mut f = options.open(file).expect("Failed to open target file");
+                        f.write_all(&current_data).expect("Failed to write to file");
+                    },
+                    _ => {
+                        let mut f = std::fs::OpenOptions::new()
+                            .create(true)
+                            .write(true)
+                            .truncate(true)
+                            .open(file)
+                            .expect("Failed to open target file");
+                        f.write_all(&current_data).expect("Failed to write to file");
+                    }
+                }
+            } else {
+                std::io::stdout().write_all(&current_data).expect("Failed to write to stdout");
+            }
+        }
     }
 }
 
@@ -466,4 +481,94 @@ fn common_strings(map: &HashMap<usize, Vec<String>>) -> Vec<String> {
             .collect();
     }
     common
+}
+
+fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>) -> String {
+    match cmd {
+        "echo" => {
+            let string = args.join(" ");
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(string.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                format!("{}\n", string)
+            }
+        },
+        "pwd" => {
+            let current_dir = std::fs::canonicalize(".").expect("failed to retrieve working directory");
+            let output = format!("{}", current_dir.display());
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                output
+            }
+        },
+        "type" => {
+            if args.is_empty() {
+                return "type: not enough arguments\n".to_string();
+            }
+            let output = match cmd::cmd_type(args[0].clone()) {
+                cmd::Type::BuiltIn => format!("{} is a shell builtin\n", args[0]),
+                cmd::Type::PathExec => format!("{} is {}\n", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
+                cmd::Type::Invalid => format!("{}: not found\n", args[0]),
+            };
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                output
+            }
+        },
+        _ => String::new(),
+    }
+}
+
+fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>, stdin: &str) -> String {
+    match cmd {
+        "echo" => {
+            let output = if !args.is_empty() {
+            args.join(" ")
+            } else {
+                if stdin.ends_with('\n') {
+                stdin.trim_end_matches('\n').to_string()
+                } else {
+                   stdin.to_string()
+                }
+            };
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                format!("{}\n", output)
+            }
+        },
+        "pwd" => {
+            let current_dir = std::fs::canonicalize(".").expect("failed to retrieve working directory");
+            let output = format!("{}", current_dir.display());
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                output
+            }
+        }
+        "type" => {
+            if args.is_empty() {
+                return "type: not enough arguments\n".to_string();
+            }
+            let output = match cmd::cmd_type(args[0].clone()) {
+                cmd::Type::BuiltIn => format!("{} is a shell builtin\n", args[0]),
+                cmd::Type::PathExec => format!("{} is {}\n", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
+                cmd::Type::Invalid => format!("{}: not found\n", args[0]),
+            };
+            if let Some((file, t)) = target {
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
+                String::new()
+            } else {
+                output
+            }
+        }
+        _ => String::new(),
+    }
 }
