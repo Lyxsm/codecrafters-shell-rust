@@ -406,6 +406,7 @@ fn execute_cmd(input: String) {
 
 fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize) -> (String, bool, bool, usize) {
     terminal::disable_raw_mode().unwrap();
+    //let mut temp: Vec<String>;
     if matches.is_empty() {
         print!("\x07");
         io::stdout().flush().unwrap();
@@ -424,15 +425,13 @@ fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize) -> (
         terminal::enable_raw_mode().unwrap();
         count += 1;
         return (input, false, true, count);
-    } else if matches.len() > 1 && count == 0 {
-        print!("\x07");
-        io::stdout().flush().unwrap();
-        terminal::enable_raw_mode().unwrap();
-        count += 1;
     } else if matches.len() > 1 {
         let common = longest_common_prefix(&matches);
-        //println!("\n{:?}", matches);
-        if common.len() >= 1 {
+        if common.len() == 1 && count == 0 /*&& input.ends_with('_')*/ {
+            print!("\x07");
+            io::stdout().flush().unwrap();
+            terminal::enable_raw_mode().unwrap();
+        } else if common.len() >= 1 {
             let mut common_temp = common.clone();
             let temp = common.join("_");
             let k = input.len();
