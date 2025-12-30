@@ -44,7 +44,7 @@ pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)
         parts.remove(0);
         piped_vec = Some(parts.clone());
         temp = input.split('|').next().unwrap();
-        println!("{:?}", piped_vec);
+        //println!("{:?}", piped_vec);
     }
     let (cmd, mut args, target) = cmd_split(temp.trim());
     return (cmd_type(cmd.clone()), cmd, args, target, piped_vec); 

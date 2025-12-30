@@ -1,1 +1,1 @@
-{"history":[[1,"history\n"],[2,"history\n"],[3,"history\n"],[4,"history\n"],[5,"history\n"],[6,"echo\n"],[7,"history\n"],[8,"echo\n"],[9,"history\n"],[10,"type history\n"],[11,"history\n"]],"length":11}
+{"history":[[1,"history\n"],[2,"history\n"],[3,"history\n"],[4,"history\n"],[5,"history\n"],[6,"echo\n"],[7,"history\n"],[8,"echo\n"],[9,"history\n"],[10,"type history\n"],[11,"history\n"],[12,"cat echo | head -n 3 | wc\n"],[13,"cat echo | head\n"],[14,"cat echo | head -n 3\n"],[15,"cat echo | head -n 3 | wc\n"],[16,"codecrafters submit\n"]],"length":16}
