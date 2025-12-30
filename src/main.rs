@@ -631,18 +631,18 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                     }    
                     output_vec.reverse();
                     for entry in output_vec {
-                        output.push_str(&format!("  {}\t{}", entry.0, entry.1));
+                        output.push_str(&format!("    {}  {}", entry.0, entry.1));
                     }                
                     output
                 } else {
                     for (count, cmd) in history {
-                        output.push_str(&format!("  {}\t{}", count, cmd));
+                        output.push_str(&format!("    {}  {}", count, cmd));
                     }
                     output
                 }
             } else {
                 for (count, cmd) in history {
-                    output.push_str(&format!("  {}\t{}", count, cmd));
+                    output.push_str(&format!("    {}  {}", count, cmd));
                 }
                 output
             }
@@ -713,18 +713,18 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                     }    
                     output_vec.reverse();
                     for entry in output_vec {
-                        output.push_str(&format!("  {}\t{}", entry.0, entry.1));
+                        output.push_str(&format!("    {}  {}", entry.0, entry.1));
                     }                
                     output
                 } else {
                     for (count, cmd) in history {
-                        output.push_str(&format!("  {}\t{}", count, cmd));
+                        output.push_str(&format!("    {}  {}", count, cmd));
                     }
                     output
                 }
             } else {
                 for (count, cmd) in history {
-                    output.push_str(&format!("  {}\t{}", count, cmd));
+                    output.push_str(&format!("    {}  {}", count, cmd));
                 }
                 output
             }
