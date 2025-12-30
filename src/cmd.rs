@@ -10,7 +10,7 @@ use std::{
 };
 use search_path::SearchPath;
 
-pub const BUILT_IN: [&str; 5] = ["echo", "exit", "type", "pwd", "cd"];
+pub const BUILT_IN: [&str; 6] = ["echo", "exit", "type", "pwd", "cd", "history"];
 //pub const BUILT_IN: [&str; 4] = ["echo", "exit", "type", "pwd"];
 
 #[derive(PartialEq, Debug, Clone)]
@@ -44,7 +44,7 @@ pub fn parse(input: &str) -> (Type, String, Vec<String>, Option<(String, Target)
         parts.remove(0);
         piped_vec = Some(parts.clone());
         temp = input.split('|').next().unwrap();
-        //println!("{:?}", piped_vec);
+        println!("{:?}", piped_vec);
     }
     let (cmd, mut args, target) = cmd_split(temp.trim());
     return (cmd_type(cmd.clone()), cmd, args, target, piped_vec); 

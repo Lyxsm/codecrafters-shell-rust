@@ -1,12 +1,13 @@
-//#![allow(unused_imports)]
+#![allow(unused_imports, unused_mut)]
 use std::{
     io::{self, Write, Read, BufRead},
     process::{Command, Stdio},
-    fs,
-    collections::HashMap,
+    fs, fmt,
+    collections::HashMap, 
     time::Duration,
 };
 use wait_timeout::ChildExt;
+use serde::{Serialize, Deserialize};
 #[allow(unused_imports)]
 use crossterm::{
     ExecutableCommand, cursor, terminal, execute,
@@ -14,6 +15,35 @@ use crossterm::{
 };
 
 mod cmd;
+
+const HISTORY: &str = "history.json";
+
+#[derive(Serialize, Deserialize, Debug)]
+struct CmdHistory {
+    history: Vec<(usize, String)>,
+    length: usize,
+}
+
+impl CmdHistory {
+    fn push(&mut self, string: String) {
+        let tuple = (self.length + 1, string);
+        self.history.push(tuple);
+        self.length += 1;
+    }
+    fn new() -> Self {
+        Self { history: Vec::<(usize, String)>::new(), length: 0 }
+    }
+}
+
+//impl fmt::Display for CmdHistory {
+//    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//        let mut buf = String::new();
+//        for (count, command) in &self.history {
+//            buf += &format!("{}  {}\n", count, command);
+//        }
+//        write!(f, "{}", buf)
+//    }
+//}
 
 fn main() {
     loop {
@@ -143,35 +173,17 @@ fn active(input: String) -> bool {
 }
 
 fn execute_cmd(input: String) {
+    add_to_history(input.clone());
     let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
+
     //println!("command: {:?}, args: {:?}, target: {:?}, pipe: {:?}", command, args, target, pipe);
     if pipe.is_none() {
         match cmd_type {
             cmd::Type::BuiltIn => {
                 match command {
-                    "echo" => {
-                        let arguments: String = args.join(" ");
-                        if let Some((file, t)) = target {
-                            cmd::print_to_file_built_in(arguments, &file, t).expect("Failed to print to file");
-                        } else {
-                            println!("{}", arguments);
-                        }
-                    },
-                    "pwd" => {
-                        let current_dir = fs::canonicalize(".").expect("Failed to retrieve working directory");
-                        println!("{}", current_dir.display());
-                    },
-                    "type" => {
-                        if args.is_empty() {
-                            println!("type: not enough arguments");
-                        } else {
-                            match cmd::cmd_type(args[0].clone()) {
-                                cmd::Type::BuiltIn => println!("{} is a shell builtin", args[0]),
-                                cmd::Type::PathExec => println!("{} is {}", args[0], cmd::find_in_path(&args[0]).expect("not found").display()),
-                                cmd::Type::Invalid => println!("{}: not found", args[0]),
-                            }
-                        }
+                    "echo" | "pwd" | "type" | "history" => {
+                        print!("{}", run_builtin(command, &args, &target));
                     },
                     "cd" => {
                         if args.is_empty() {
@@ -561,17 +573,17 @@ fn common_strings(map: &HashMap<usize, Vec<String>>) -> Vec<String> {
 fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>) -> String {
     match cmd {
         "echo" => {
-            let string = args.join(" ");
+            let output = args.join(" ");
             if let Some((file, t)) = target {
-                cmd::print_to_file_built_in(string.clone(), file, t.clone()).ok();
+                cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
                 String::new()
             } else {
-                format!("{}\n", string)
+                format!("{}\n", output)
             }
         },
         "pwd" => {
             let current_dir = std::fs::canonicalize(".").expect("failed to retrieve working directory");
-            let output = format!("{}", current_dir.display());
+            let output = format!("{}\n", current_dir.display());
             if let Some((file, t)) = target {
                 cmd::print_to_file_built_in(output.clone(), file, t.clone()).ok();
                 String::new()
@@ -594,6 +606,14 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
             } else {
                 output
             }
+        },
+        "history" => {
+            let history = history();
+            let mut output = String::new();
+            for (count, cmd) in history {
+                output.push_str(&format!("  {}  {}", count, cmd));
+            }
+            output
         },
         _ => String::new(),
     }
@@ -644,6 +664,14 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                 output
             }
         },
+        "history" => {
+            let history = history();
+            let mut output = String::new();
+            for (count, cmd) in history {
+                output.push_str(&format!("  {}  {}", count, cmd));
+            }
+            output
+        },
         _ => String::new(),
     }
 }
@@ -655,4 +683,37 @@ fn first_number(strings: &Vec<String>) -> Option<f64> {
         }
     }
     None
+}
+
+fn history() -> Vec<(usize, String)> {
+    let mut history = CmdHistory::new();
+    if let Ok(metadata) = fs::metadata(HISTORY) {
+        if metadata.len() > 0 {
+            let contents = fs::read_to_string(HISTORY).expect("Unable to read history");
+            history = serde_json::from_str(&contents).expect("Unable to parse history");
+        }
+    }
+    history.history
+}
+
+fn add_to_history(input: String) {
+    let mut history = CmdHistory::new();
+    if input.is_empty() {
+        return
+    } else {
+        if let Ok(metadata) = fs::metadata(HISTORY) {
+            if metadata.len() > 0 {
+                let contents = fs::read_to_string(HISTORY).expect("Unable to read history");
+                history = serde_json::from_str(&contents).expect("Unable to parse history");
+            }
+        }
+        let command = format!("{}\n", input);
+        history.push(command);
+        save_to_json(HISTORY, &history);
+    }
+}
+
+fn save_to_json(filename: &str, content: &CmdHistory) {
+    let json_data = serde_json::to_string(content).expect("Unable to serialize data");
+    fs::write(filename, json_data).expect("Unable to write to history");
 }
