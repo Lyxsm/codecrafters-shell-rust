@@ -58,7 +58,6 @@ fn active(input: String) -> bool {
                     },
                     KeyCode::Enter => {
                         if input.trim().is_empty() {
-                            //io::stdout().flush().unwrap();
                             terminal::disable_raw_mode().unwrap();
                             println!();
                             io::stdout().flush().unwrap();
@@ -71,10 +70,8 @@ fn active(input: String) -> bool {
                         } else {
                             terminal::disable_raw_mode().unwrap();
                             println!();
-                            io::stdout().flush().unwrap();
                             execute_cmd(input.clone());
                             io::stdout().flush().unwrap();
-                            input.clear();
                             event_handled = true;
                         }
                     },
@@ -88,9 +85,9 @@ fn active(input: String) -> bool {
                     KeyCode::Char(c) => {
                         if modifiers == KeyModifiers::CONTROL && c == 'j' {
                             if input.trim().is_empty() {
-                                io::stdout().flush().unwrap();
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
+                                io::stdout().flush().unwrap();
                                 break 'inner;
                             } else if input.trim() == "exit" {
                                 terminal::disable_raw_mode().unwrap();
@@ -100,10 +97,7 @@ fn active(input: String) -> bool {
                             } else {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
-                                io::stdout().flush().unwrap();
                                 execute_cmd(input.clone());
-                                io::stdout().flush().unwrap();
-                                input.clear();
                                 io::stdout().flush().unwrap();
                                 event_handled = true;
                             }
@@ -151,7 +145,7 @@ fn active(input: String) -> bool {
 fn execute_cmd(input: String) {
     let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
-    //println!("command: {:?}\targs: {:?}\ttarget: {:?}", command, args, target);
+    //println!("command: {:?}, args: {:?}, target: {:?}, pipe: {:?}", command, args, target, pipe);
     if pipe.is_none() {
         match cmd_type {
             cmd::Type::BuiltIn => {
@@ -226,6 +220,8 @@ fn execute_cmd(input: String) {
         segments.push((parsed.0, parsed.1, parsed.2, parsed.3));
     }
 
+    //println!("{:?}", segments); 
+
     let initial_output: Option<Vec<u8>> = match cmd_type {
         cmd::Type::BuiltIn => {
             let output = run_builtin(command, &args, &target);
@@ -263,7 +259,8 @@ fn execute_cmd(input: String) {
 
     for (idx, (seg_type, seg_cmd, seg_args, seg_target)) in segments.into_iter().enumerate() {
         let seg_cmd_str = seg_cmd.as_str();
-
+        //println!("[{}]: type: {:?}\tcmd: {}\targs: {:?}\ttarget: {:?}", idx, seg_type, seg_cmd, seg_args, seg_target);
+        //std::io::stdout().write_all(&current_data);
         match seg_type {
             cmd::Type::BuiltIn => {
                 let stdin_string = String::from_utf8_lossy(&current_data).to_string();
