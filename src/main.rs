@@ -236,13 +236,13 @@ fn execute_cmd(input: String) {
 
             let mut stdout = child.stdout.take();
 
-            match child.wait_timeout(Duration::from_millis(1500)).expect("wait_timeout failed") {
+            match child.wait_timeout(Duration::from_millis(1750)).expect("wait_timeout failed") {
                 Some(_status) => {
 
                 },
                 None => {
-                    let _ = child.wait();
                     let _ = child.kill();
+                    let _ = child.wait();
                 }
             }
 
@@ -286,7 +286,7 @@ fn execute_cmd(input: String) {
 
                 let mut stdout = child.stdout.take();
 
-                match child.wait_timeout(Duration::from_millis(1500)).unwrap() {
+                match child.wait_timeout(Duration::from_millis(1750)).unwrap() {
                     Some(status) => {
                         if !status.success() {
                             eprintln!("Piped command exited with status: {}", status);
@@ -294,8 +294,8 @@ fn execute_cmd(input: String) {
                     },
                     None => {
                         //eprintln!("Command timed out, terminating...");
-                        let _ = child.wait();
                         let _ = child.kill();
+                        let _ = child.wait();
                     }
                 }
                 
