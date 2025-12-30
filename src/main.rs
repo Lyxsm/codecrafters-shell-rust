@@ -617,10 +617,35 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
         "history" => {
             let history = history();
             let mut output = String::new();
-            for (count, cmd) in history {
-                output.push_str(&format!("  {}  {}", count, cmd));
+            if !args.is_empty() {
+                if let Ok(number) = args[0].parse::<usize>() {
+                    let mut count: usize = number;
+                    if count > history.len() {
+                        count = history.len();
+                    }
+                    let mut output_vec = Vec::new();
+                    for i in 1..=count {
+                        let idx = history.len() - i;
+                        let entry = (history[idx].0, history[idx].1.clone());
+                        output_vec.push(entry);
+                    }    
+                    output_vec.reverse();
+                    for entry in output_vec {
+                        output.push_str(&format!("  {}\t{}", entry.0, entry.1));
+                    }                
+                    output
+                } else {
+                    for (count, cmd) in history {
+                        output.push_str(&format!("  {}\t{}", count, cmd));
+                    }
+                    output
+                }
+            } else {
+                for (count, cmd) in history {
+                    output.push_str(&format!("  {}\t{}", count, cmd));
+                }
+                output
             }
-            output
         },
         _ => String::new(),
     }
@@ -674,10 +699,35 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
         "history" => {
             let history = history();
             let mut output = String::new();
-            for (count, cmd) in history {
-                output.push_str(&format!("  {}  {}", count, cmd));
+            if !args.is_empty() {
+                if let Ok(number) = args[0].parse::<usize>() {
+                    let mut count: usize = number;
+                    if count > history.len() {
+                        count = history.len();
+                    }
+                    let mut output_vec = Vec::new();
+                    for i in 1..=count {
+                        let idx = history.len() - i;
+                        let entry = (history[idx].0, history[idx].1.clone());
+                        output_vec.push(entry);
+                    }    
+                    output_vec.reverse();
+                    for entry in output_vec {
+                        output.push_str(&format!("  {}\t{}", entry.0, entry.1));
+                    }                
+                    output
+                } else {
+                    for (count, cmd) in history {
+                        output.push_str(&format!("  {}\t{}", count, cmd));
+                    }
+                    output
+                }
+            } else {
+                for (count, cmd) in history {
+                    output.push_str(&format!("  {}\t{}", count, cmd));
+                }
+                output
             }
-            output
         },
         _ => String::new(),
     }
@@ -714,8 +764,8 @@ fn add_to_history(input: String) {
                 history = serde_json::from_str(&contents).expect("Unable to parse history");
             }
         }
-        let command = format!("{}\n", input);
-        history.push(command);
+        let input = format!("{}\n", input);
+        history.push(input);
         save_to_json(HISTORY, &history);
     }
 }
