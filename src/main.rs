@@ -1,12 +1,11 @@
-//#![allow(unused_imports)]
+#![allow(unused_imports)]
 use std::{
     io::{self, Write, Read},
     process::{Command, Stdio},
-    fs,
+    path::{self, PathBuf},
+    fs, env, slice,
     collections::HashMap,
-    time::Duration,
 };
-use wait_timeout::ChildExt;
 #[allow(unused_imports)]
 use crossterm::{
     ExecutableCommand, cursor, terminal, execute,
@@ -14,6 +13,7 @@ use crossterm::{
 };
 
 mod cmd;
+mod tests;
 
 fn main() {
     loop {
@@ -58,6 +58,7 @@ fn active(input: String) -> bool {
                     },
                     KeyCode::Enter => {
                         if input.trim().is_empty() {
+                            //io::stdout().flush().unwrap();
                             terminal::disable_raw_mode().unwrap();
                             println!();
                             io::stdout().flush().unwrap();
@@ -70,8 +71,10 @@ fn active(input: String) -> bool {
                         } else {
                             terminal::disable_raw_mode().unwrap();
                             println!();
+                            io::stdout().flush().unwrap();
                             execute_cmd(input.clone());
                             io::stdout().flush().unwrap();
+                            input.clear();
                             event_handled = true;
                         }
                     },
@@ -85,9 +88,9 @@ fn active(input: String) -> bool {
                     KeyCode::Char(c) => {
                         if modifiers == KeyModifiers::CONTROL && c == 'j' {
                             if input.trim().is_empty() {
+                                io::stdout().flush().unwrap();
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
-                                io::stdout().flush().unwrap();
                                 break 'inner;
                             } else if input.trim() == "exit" {
                                 terminal::disable_raw_mode().unwrap();
@@ -97,7 +100,10 @@ fn active(input: String) -> bool {
                             } else {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
+                                io::stdout().flush().unwrap();
                                 execute_cmd(input.clone());
+                                io::stdout().flush().unwrap();
+                                input.clear();
                                 io::stdout().flush().unwrap();
                                 event_handled = true;
                             }
@@ -145,7 +151,7 @@ fn active(input: String) -> bool {
 fn execute_cmd(input: String) {
     let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
-    //println!("command: {:?}, args: {:?}, target: {:?}, pipe: {:?}", command, args, target, pipe);
+    //println!("command: {:?}\targs: {:?}\ttarget: {:?}", command, args, target);
     if pipe.is_none() {
         match cmd_type {
             cmd::Type::BuiltIn => {
@@ -220,8 +226,6 @@ fn execute_cmd(input: String) {
         segments.push((parsed.0, parsed.1, parsed.2, parsed.3));
     }
 
-    //println!("{:?}", segments); 
-
     let initial_output: Option<Vec<u8>> = match cmd_type {
         cmd::Type::BuiltIn => {
             let output = run_builtin(command, &args, &target);
@@ -234,22 +238,11 @@ fn execute_cmd(input: String) {
                 .spawn()
                 .expect("Failed to execute command");
 
-            let mut stdout = child.stdout.take();
-
-            match child.wait_timeout(Duration::from_millis(2000)).expect("wait_timeout failed") {
-                Some(_status) => {
-
-                },
-                None => {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                }
-            }
-
             let mut buf = Vec::new();
-            if let Some(mut stdout) = stdout {
-                let _ = stdout.read_to_end(&mut buf);
+            if let Some(mut stdout) = child.stdout.take() {
+                stdout.read_to_end(&mut buf).expect("Failed to read stdout");
             }
+            child.wait().expect("Command was not running");
             Some(buf)
         },
         _ => None,
@@ -259,8 +252,7 @@ fn execute_cmd(input: String) {
 
     for (idx, (seg_type, seg_cmd, seg_args, seg_target)) in segments.into_iter().enumerate() {
         let seg_cmd_str = seg_cmd.as_str();
-        //println!("[{}]: type: {:?}\tcmd: {}\targs: {:?}\ttarget: {:?}", idx, seg_type, seg_cmd, seg_args, seg_target);
-        //std::io::stdout().write_all(&current_data);
+
         match seg_type {
             cmd::Type::BuiltIn => {
                 let stdin_string = String::from_utf8_lossy(&current_data).to_string();
@@ -276,34 +268,14 @@ fn execute_cmd(input: String) {
                     .expect("Failed to start piped command");
 
                 if let Some(mut stdin) = child.stdin.take() {
-                    if let Err(e) = stdin.write_all(&current_data) {
-                        eprintln!("Failed to write to piped command stdin: {}", e);
-                        let _ = child.kill();
-                        return;
-                    }
-                    drop(stdin);
+                    stdin.write_all(&current_data).expect("Failed to write to piped command stdin");
                 }
 
-                let mut stdout = child.stdout.take();
-
-                match child.wait_timeout(Duration::from_millis(2000)).unwrap() {
-                    Some(status) => {
-                        if !status.success() {
-                            eprintln!("Piped command exited with status: {}", status);
-                        }
-                    },
-                    None => {
-                        //eprintln!("Command timed out, terminating...");
-                        let _ = child.kill();
-                        let _ = child.wait();
-                    }
-                }
-                
                 let mut buf = Vec::new();
-                if let Some(mut stdout) = stdout {
-                    let _ = stdout.read_to_end(&mut buf);
+                if let Some(mut stdout) = child.stdout.take() {
+                    stdout.read_to_end(&mut buf).expect("Failed to read piped stdout");
                 }
-
+                child.wait().expect("Piped command was not running");
                 current_data = buf;
             },
             _ => {}
@@ -580,7 +552,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
             } else {
                 output
             }
-        },
+        }
         "type" => {
             if args.is_empty() {
                 return "type: not enough arguments\n".to_string();
@@ -596,7 +568,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
             } else {
                 output
             }
-        },
+        }
         _ => String::new(),
     }
 }
