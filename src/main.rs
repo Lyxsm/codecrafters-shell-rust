@@ -236,7 +236,7 @@ fn execute_cmd(input: String) {
 
             let mut stdout = child.stdout.take();
 
-            match child.wait_timeout(Duration::from_millis(100)).expect("wait_timeout failed") {
+            match child.wait_timeout(Duration::from_millis(500)).expect("wait_timeout failed") {
                 Some(_status) => {
 
                 },
@@ -286,7 +286,7 @@ fn execute_cmd(input: String) {
 
                 let mut stdout = child.stdout.take();
 
-                match child.wait_timeout(Duration::from_millis(100)).unwrap() {
+                match child.wait_timeout(Duration::from_millis(500)).unwrap() {
                     Some(status) => {
                         if !status.success() {
                             eprintln!("Piped command exited with status: {}", status);
