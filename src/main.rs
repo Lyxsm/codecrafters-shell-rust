@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::{
-    io::{self, Write, Read},
+    io::{self, Write, Read, BufReader},
     process::{Command, Stdio},
     path::{self, PathBuf},
     fs, env, slice,
@@ -285,11 +285,17 @@ fn execute_cmd(input: String) {
                 // Handling the buffer for stdout
                 let mut buf = Vec::new();
                 if let Some(mut stdout) = child.stdout.take() {
-                    let result = stdout.read_to_end(&mut buf);
-                    if let Err(e) = result {
-                        eprintln!("Failed to read piped stdout: {}", e);
-                        let _ = child.kill().expect("Failed to kill the child process");
-                        return; // Exit if reading fails
+                    let mut reader = BufReader::new(stdout);
+                    let mut temp_buf = Vec::new();
+                    let result = reader.read_to_end(&mut temp_buf);
+                    
+                    match result {
+                        Ok(_) => buf.extend(temp_buf),
+                        Err(e) => {
+                            eprintln!("Failed to read piped stdout: {}", e);
+                            let _ = child.kill().expect("Failed to kill the child process");
+                            return;
+                        }
                     }
                 }
 
