@@ -13,7 +13,6 @@ use crossterm::{
 };
 
 mod cmd;
-mod tests;
 
 fn main() {
     loop {
