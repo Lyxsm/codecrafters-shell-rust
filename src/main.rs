@@ -1,4 +1,4 @@
-#![allow(unused_imports, unused_mut)]
+#![allow(unused_imports, unused_mut, unused)]
 use std::{
     io::{self, Write, Read, BufRead},
     process::{Command, Stdio},
@@ -33,6 +33,15 @@ impl CmdHistory {
     fn new() -> Self {
         Self { history: Vec::<(usize, String)>::new(), length: 0 }
     }
+    fn last_entry(&self) -> (usize, String) {
+        if self.history.len() > 1 {
+            self.history.last().unwrap().clone()
+        } else if self.history.is_empty() {
+            (0, String::new())
+        } else {
+            self.history[0].clone()
+        }
+    }
 }
 
 //impl fmt::Display for CmdHistory {
@@ -56,6 +65,7 @@ fn main() {
 }
 
 fn active(input: String, mut history: &mut CmdHistory) -> bool {
+    let mut history_offset = 0;
     print!("$ ");
     io::stdout().flush().unwrap();
     terminal::enable_raw_mode().unwrap();
@@ -160,6 +170,53 @@ fn active(input: String, mut history: &mut CmdHistory) -> bool {
                         }
                     },
                     KeyCode::Up => {
+                        if !history.history.is_empty() {
+                            terminal::disable_raw_mode().unwrap();
+                            for _i in 0..input.len() {
+                                print!("\x08 \x08");
+                            }
+                            input.clear();
+                            io::stdout().flush().unwrap();
+                            let mut temp = history.history.clone();
+                            temp.push((history.length, String::new()));
+                            let len = temp.len() - 1;
+                            history_offset += 1;
+                            if history_offset > len {
+                                input = String::new();
+                                history_offset = 0;
+                            } else {
+                                input = temp[len - history_offset].1.trim().to_string();
+                            }
+                            print!("{input}");
+                            io::stdout().flush().unwrap();
+                            terminal::enable_raw_mode().unwrap();
+                        }
+                    },
+                    KeyCode::Down => {
+                        if !history.history.is_empty() {
+                            terminal::disable_raw_mode().unwrap();
+                            for _i in 0..input.len() {
+                                print!("\x08 \x08");
+                            }
+                            input.clear();
+                            io::stdout().flush().unwrap();
+                            let mut temp = history.history.clone();
+                            temp.push((history.length, String::new()));
+                            let len = temp.len() - 1;
+                            if history_offset == 0 {
+                                input = String::new();
+                            } else {
+                                if history_offset > len {
+                                    history_offset = len;
+                                } else {
+                                    history_offset -= 1;
+                                }
+                                input = temp[len - history_offset].1.trim().to_string();
+                            }
+                            print!("{input}");
+                            io::stdout().flush().unwrap();
+                            terminal::enable_raw_mode().unwrap();
+                        }
                     },
                     _ => {
 
