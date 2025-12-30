@@ -1,11 +1,12 @@
-#![allow(unused_imports)]
+//#![allow(unused_imports)]
 use std::{
-    io::{self, Write, Read, BufReader},
+    io::{self, Write, Read},
     process::{Command, Stdio},
-    path::{self, PathBuf},
-    fs, env, slice,
+    fs,
     collections::HashMap,
+    time::Duration,
 };
+use wait_timeout::ChildExt;
 #[allow(unused_imports)]
 use crossterm::{
     ExecutableCommand, cursor, terminal, execute,
@@ -238,11 +239,22 @@ fn execute_cmd(input: String) {
                 .spawn()
                 .expect("Failed to execute command");
 
-            let mut buf = Vec::new();
-            if let Some(mut stdout) = child.stdout.take() {
-                stdout.read_to_end(&mut buf).expect("Failed to read stdout");
+            let mut stdout = child.stdout.take();
+
+            match child.wait_timeout(Duration::from_secs(2)).expect("wait_timeout failed") {
+                Some(_status) => {
+
+                },
+                None => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                }
             }
-            child.wait().expect("Command was not running");
+
+            let mut buf = Vec::new();
+            if let Some(mut stdout) = stdout {
+                let _ = stdout.read_to_end(&mut buf);
+            }
             Some(buf)
         },
         _ => None,
@@ -267,43 +279,35 @@ fn execute_cmd(input: String) {
                     .spawn()
                     .expect("Failed to start piped command");
 
-                let cloned_data = current_data.clone();
-
-                // Get a mutable reference to stdin stream
-                if let Some(ref mut stdin) = child.stdin.take() {
-                    // Handle Result from write_all
-                    if let Err(e) = stdin.write_all(&cloned_data) {
+                if let Some(mut stdin) = child.stdin.take() {
+                    if let Err(e) = stdin.write_all(&current_data) {
                         eprintln!("Failed to write to piped command stdin: {}", e);
-                        // Optionally terminate the child
-                        let _ = child.kill().expect("Failed to kill the child process");
-                        return; // Exit if writing fails
+                        let _ = child.kill();
+                        return;
                     }
-                    // Drop stdin explicitly to close it after writing
                     drop(stdin);
                 }
 
-                // Handling the buffer for stdout
-                let mut buf = Vec::new();
-                if let Some(mut stdout) = child.stdout.take() {
-                    let mut reader = BufReader::new(stdout);
-                    let mut temp_buf = Vec::new();
-                    let result = reader.read_to_end(&mut temp_buf);
-                    
-                    match result {
-                        Ok(_) => buf.extend(temp_buf),
-                        Err(e) => {
-                            eprintln!("Failed to read piped stdout: {}", e);
-                            let _ = child.kill().expect("Failed to kill the child process");
-                            return;
+                let mut stdout = child.stdout.take();
+
+                match child.wait_timeout(Duration::from_secs(2)).unwrap() {
+                    Some(status) => {
+                        if !status.success() {
+                            eprintln!("Piped command exited with status: {}", status);
                         }
+                    },
+                    None => {
+                        //eprintln!("Command timed out, terminating...");
+                        let _ = child.kill();
+                        let _ = child.wait();
                     }
                 }
-
-                // Wait for the child process to finish execution
-                if let Err(e) = child.wait() {
-                    eprintln!("Error while waiting for the command to finish: {}", e);
-                }
                 
+                let mut buf = Vec::new();
+                if let Some(mut stdout) = stdout {
+                    let _ = stdout.read_to_end(&mut buf);
+                }
+
                 current_data = buf;
             },
             _ => {}
@@ -580,7 +584,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
             } else {
                 output
             }
-        }
+        },
         "type" => {
             if args.is_empty() {
                 return "type: not enough arguments\n".to_string();
@@ -596,7 +600,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
             } else {
                 output
             }
-        }
+        },
         _ => String::new(),
     }
 }
