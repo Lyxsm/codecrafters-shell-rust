@@ -75,8 +75,8 @@ fn active(input: String) -> bool {
                             print!("\x07");
                             io::stdout().flush().unwrap();
                         }
-
-                        let (string, event, stay_active) = auto_complete(input.clone(), matches.clone());
+                        let count = 0;
+                        let (string, event, stay_active, _count) = auto_complete(input.clone(), matches.clone(), count);
                         event_handled = event;
                         io::stdout().flush().unwrap();
                         if !stay_active {
@@ -404,14 +404,14 @@ fn execute_cmd(input: String) {
     }
 }
 
-fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool) {
-
+fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize) -> (String, bool, bool, usize) {
     terminal::disable_raw_mode().unwrap();
     if matches.is_empty() {
         print!("\x07");
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
-        return (input, false, true);
+        count += 1;
+        return (input, false, true, count);
     } else if matches.len() == 1 {
         for _i in 0..input.len() {
             print!("\x08 \x08");
@@ -422,7 +422,13 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
         print!("{}", input);
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
-        return (input, false, true);
+        count += 1;
+        return (input, false, true, count);
+    } else if matches.len() > 1 && count == 0 {
+        print!("\x07");
+        io::stdout().flush().unwrap();
+        terminal::enable_raw_mode().unwrap();
+        count += 1;
     } else if matches.len() > 1 {
         let common = longest_common_prefix(&matches);
         //println!("\n{:?}", matches);
@@ -459,6 +465,7 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
         //print!("\n$ {}", input);
         io::stdout().flush().unwrap();
         terminal::enable_raw_mode().unwrap();
+        count += 1;
     }
 
     loop {
@@ -468,13 +475,14 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
                     KeyCode::Tab => { 
                         if matches.len() > 1 {
                             terminal::enable_raw_mode().unwrap();
-                            let (result, bool1, bool2) = auto_complete(input, matches);    
+                            let (result, bool1, bool2, count) = auto_complete(input, matches, count);    
                             io::stdout().flush().unwrap();
-                            return (result, bool1, bool2);
+                            return (result, bool1, bool2, count);
                         } else {
                             terminal::enable_raw_mode().unwrap();
                             io::stdout().flush().unwrap();
-                            return (input, false, true);
+                            count += 1;
+                            return (input, false, true, count);
                         }
                     },
                     KeyCode::Enter => {
@@ -482,7 +490,7 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
                             terminal::disable_raw_mode().unwrap();
                             println!();
                             io::stdout().flush().unwrap();
-                            return (input,true, false);
+                            return (input,true, false, count);
                         } else {
                             terminal::disable_raw_mode().unwrap();
                             println!();
@@ -492,14 +500,14 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
                             input.clear();
                             io::stdout().flush().unwrap();
                             terminal::enable_raw_mode().unwrap();
-                            return(input,true, true);
+                            return(input,true, true, count);
                         }
                     },
                     KeyCode::Backspace => {
                         input.pop();
                         print!("\x08 \x08");
                         io::stdout().flush().unwrap();
-                        return (input, false, true);
+                        return (input, false, true, count);
                     },
                     KeyCode::Char(c) => {
                         if modifiers == KeyModifiers::CONTROL && c == 'w' {
@@ -527,11 +535,11 @@ fn auto_complete(mut input: String, matches: Vec<String>) -> (String, bool, bool
                             print!("{}", c);
                             io::stdout().flush().unwrap();
                             terminal::enable_raw_mode().unwrap();
-                            return (input, false, true);
+                            return (input, false, true, count);
                         }
                     },
                     _ => {
-                        return (input, false, true);
+                        return (input, false, true, count);
                     }
                 }
             }
