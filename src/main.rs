@@ -267,15 +267,37 @@ fn execute_cmd(input: String) {
                     .spawn()
                     .expect("Failed to start piped command");
 
-                if let Some(mut stdin) = child.stdin.take() {
-                    stdin.write_all(&current_data).expect("Failed to write to piped command stdin");
+                let cloned_data = current_data.clone();
+
+                // Get a mutable reference to stdin stream
+                if let Some(ref mut stdin) = child.stdin.take() {
+                    // Handle Result from write_all
+                    if let Err(e) = stdin.write_all(&cloned_data) {
+                        eprintln!("Failed to write to piped command stdin: {}", e);
+                        // Optionally terminate the child
+                        let _ = child.kill().expect("Failed to kill the child process");
+                        return; // Exit if writing fails
+                    }
+                    // Drop stdin explicitly to close it after writing
+                    drop(stdin);
                 }
 
+                // Handling the buffer for stdout
                 let mut buf = Vec::new();
                 if let Some(mut stdout) = child.stdout.take() {
-                    stdout.read_to_end(&mut buf).expect("Failed to read piped stdout");
+                    let result = stdout.read_to_end(&mut buf);
+                    if let Err(e) = result {
+                        eprintln!("Failed to read piped stdout: {}", e);
+                        let _ = child.kill().expect("Failed to kill the child process");
+                        return; // Exit if reading fails
+                    }
                 }
-                child.wait().expect("Piped command was not running");
+
+                // Wait for the child process to finish execution
+                if let Err(e) = child.wait() {
+                    eprintln!("Error while waiting for the command to finish: {}", e);
+                }
+                
                 current_data = buf;
             },
             _ => {}
