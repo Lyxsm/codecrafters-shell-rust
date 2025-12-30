@@ -1,6 +1,6 @@
 //#![allow(unused_imports)]
 use std::{
-    io::{self, Write, Read},
+    io::{self, Write, Read, BufRead},
     process::{Command, Stdio},
     fs,
     collections::HashMap,
@@ -228,29 +228,76 @@ fn execute_cmd(input: String) {
             Some(output.into_bytes())
         },
         cmd::Type::PathExec => {
-            let mut child = Command::new(command)
-                .args(&args)
-                .stdout(Stdio::piped())
-                .spawn()
-                .expect("Failed to execute command");
+            match command {
+                "tail" => {
+                    let mut arg_count: usize = 99999;
+                    if segments[0].1.contains("head") {
+                        let num = first_number(&segments[0].2);
+                        arg_count = num.map(|n| n as usize).unwrap_or(5);
+                    }
+                    let mut child = Command::new(command)
+                        .args(&args)
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .expect("Failed to execute command");
 
-            let mut stdout = child.stdout.take();
+                    let mut stdout = child.stdout.take();
+                    let mut buf = Vec::new();
+                    let mut line_count = 0;
 
-            match child.wait_timeout(Duration::from_millis(1750)).expect("wait_timeout failed") {
-                Some(_status) => {
+                    let mut reader = io::BufReader::new(stdout.as_mut().expect("Failed to read stdout"));
+                    let mut stdout_handle = io::stdout();
 
-                },
-                None => {
+                    for line in reader.lines() {
+                        match line {
+                            Ok(line_content) => {
+                                stdout_handle.write_all(line_content.as_bytes()).expect("Failed to write to stdout");
+                                stdout_handle.write_all(b"\n").expect("Failed to write newline to stdout");
+                                buf.extend_from_slice(line_content.as_bytes());
+                                buf.push(b'\n');
+                                line_count += 1;
+                                if line_count >= arg_count {
+                                    break;
+                                }
+                            },
+                            Err(e) => {
+                                eprintln!("Error reading output: {}", e);
+                                break;
+                            }
+                        }
+                    }
+
+                    stdout_handle.flush().expect("Failed to flush stdout");
+
                     let _ = child.kill();
-                    let _ = child.wait();
+                    let _ = child.wait().expect("Failed to wait on child process");
+                    None
+                },
+                _ => {
+                    let mut child = Command::new(command)
+                        .args(&args)
+                        .stdout(Stdio::piped())
+                        .spawn()
+                        .expect("Failed to execute command");
+
+                    let mut stdout = child.stdout.take();
+
+                    match child.wait_timeout(Duration::from_millis(100)).expect("wait_timeout failed") {
+                        Some(_status) => {},
+                        None => {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                        },
+                    }
+
+                    let mut buf = Vec::new();
+                    if let Some(mut stdout) = stdout {
+                        let _ = stdout.read_to_end(&mut buf);
+                    }
+
+                    Some(buf)
                 }
             }
-
-            let mut buf = Vec::new();
-            if let Some(mut stdout) = stdout {
-                let _ = stdout.read_to_end(&mut buf);
-            }
-            Some(buf)
         },
         _ => None,
     };
@@ -599,4 +646,13 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
         },
         _ => String::new(),
     }
+}
+
+fn first_number(strings: &Vec<String>) -> Option<f64> {
+    for s in strings {
+        if let Ok(number) = s.parse::<f64>() {
+            return Some(number);
+        }
+    }
+    None
 }
