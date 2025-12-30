@@ -18,7 +18,7 @@ mod cmd;
 
 const HISTORY: &str = "history.json";
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct CmdHistory {
     history: Vec<(usize, String)>,
     length: usize,
@@ -46,16 +46,16 @@ impl CmdHistory {
 //}
 
 fn main() {
+    let mut history = CmdHistory::new();
     loop {
-        let history = CmdHistory::new();
         let input = String::new();
-        if !active(input, history) {
+        if !active(input, &mut history) {
             return;
         }
     }
 }
 
-fn active(input: String, history: CmdHistory) -> bool {
+fn active(input: String, mut history: &mut CmdHistory) -> bool {
     print!("$ ");
     io::stdout().flush().unwrap();
     terminal::enable_raw_mode().unwrap();
@@ -77,7 +77,7 @@ fn active(input: String, history: CmdHistory) -> bool {
                             io::stdout().flush().unwrap();
                         }
                         let count = 0;
-                        let (string, event, stay_active, _count) = auto_complete(input.clone(), matches.clone(), count, history);
+                        let (string, event, stay_active, _count) = auto_complete(input.clone(), matches.clone(), count, &mut history);
                         event_handled = event;
                         io::stdout().flush().unwrap();
                         if !stay_active {
@@ -101,7 +101,7 @@ fn active(input: String, history: CmdHistory) -> bool {
                         } else {
                             terminal::disable_raw_mode().unwrap();
                             println!();
-                            execute_cmd(input.clone(), history);
+                            execute_cmd(input.clone(), &mut history);
                             io::stdout().flush().unwrap();
                             event_handled = true;
                         }
@@ -128,7 +128,7 @@ fn active(input: String, history: CmdHistory) -> bool {
                             } else {
                                 terminal::disable_raw_mode().unwrap();
                                 println!();
-                                execute_cmd(input.clone(), history);
+                                execute_cmd(input.clone(), &mut history);
                                 io::stdout().flush().unwrap();
                                 event_handled = true;
                             }
@@ -173,9 +173,11 @@ fn active(input: String, history: CmdHistory) -> bool {
     return true;
 }
 
-fn execute_cmd(input: String, history: CmdHistory) {
+fn execute_cmd(input: String, mut history: &mut CmdHistory) {
     //add_to_history(input.clone());
-    history.push(input);
+    let mut entry = format!("{}\n", input.clone());
+
+    history.push(entry);
     let (cmd_type, command, args, target, pipe) = cmd::parse(&input);
     let command = command.as_str();
 
@@ -185,7 +187,7 @@ fn execute_cmd(input: String, history: CmdHistory) {
             cmd::Type::BuiltIn => {
                 match command {
                     "echo" | "pwd" | "type" | "history" => {
-                        print!("{}", run_builtin(command, &args, &target, history));
+                        print!("{}", run_builtin(command, &args, &target, &mut history));
                     },
                     "cd" => {
                         if args.is_empty() {
@@ -238,7 +240,7 @@ fn execute_cmd(input: String, history: CmdHistory) {
 
     let initial_output: Option<Vec<u8>> = match cmd_type {
         cmd::Type::BuiltIn => {
-            let output = run_builtin(command, &args, &target, history);
+            let output = run_builtin(command, &args, &target, &mut history);
             Some(output.into_bytes())
         },
         cmd::Type::PathExec => {
@@ -325,7 +327,7 @@ fn execute_cmd(input: String, history: CmdHistory) {
         match seg_type {
             cmd::Type::BuiltIn => {
                 let stdin_string = String::from_utf8_lossy(&current_data).to_string();
-                let output = run_builtin_stdin(&seg_cmd, &seg_args, &seg_target, &stdin_string);
+                let output = run_builtin_stdin(&seg_cmd, &seg_args, &seg_target, &stdin_string, &mut history);
                 current_data = output.into_bytes();
             },
             cmd::Type::PathExec => {
@@ -406,7 +408,7 @@ fn execute_cmd(input: String, history: CmdHistory) {
     }
 }
 
-fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize, history: CmdHistory) -> (String, bool, bool, usize) {
+fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize, mut history: &mut CmdHistory) -> (String, bool, bool, usize) {
     terminal::disable_raw_mode().unwrap();
     //let mut temp: Vec<String>;
     if matches.is_empty() {
@@ -476,7 +478,7 @@ fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize, hist
                     KeyCode::Tab => { 
                         if matches.len() > 1 {
                             terminal::enable_raw_mode().unwrap();
-                            let (result, bool1, bool2, count) = auto_complete(input, matches, count, history);    
+                            let (result, bool1, bool2, count) = auto_complete(input, matches, count, &mut history);    
                             io::stdout().flush().unwrap();
                             return (result, bool1, bool2, count);
                         } else {
@@ -496,7 +498,7 @@ fn auto_complete(mut input: String, matches: Vec<String>, mut count: usize, hist
                             terminal::disable_raw_mode().unwrap();
                             println!();
                             io::stdout().flush().unwrap();
-                            execute_cmd(input.clone(), history);
+                            execute_cmd(input.clone(), &mut history);
                             io::stdout().flush().unwrap();
                             input.clear();
                             io::stdout().flush().unwrap();
@@ -579,7 +581,7 @@ fn common_strings(map: &HashMap<usize, Vec<String>>) -> Vec<String> {
     common
 }
 
-fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>, history: CmdHistory) -> String {
+fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>, mut history: &mut CmdHistory) -> String {
     match cmd {
         "echo" => {
             let output = args.join(" ");
@@ -618,6 +620,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
         },
         "history" => {
             //let history = history();
+            let history = history.history.clone();
             let mut output = String::new();
             if !args.is_empty() {
                 if let Ok(number) = args[0].parse::<usize>() {
@@ -653,7 +656,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
     }
 }
 
-fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>, stdin: &str, history: CmdHistory) -> String {
+fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)>, stdin: &str, mut history: &mut CmdHistory) -> String {
     match cmd {
         "echo" => {
             let output = if !args.is_empty() {
@@ -700,6 +703,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
         },
         "history" => {
             //let history = history();
+            let history = history.history.clone();
             let mut output = String::new();
             if !args.is_empty() {
                 if let Ok(number) = args[0].parse::<usize>() {
