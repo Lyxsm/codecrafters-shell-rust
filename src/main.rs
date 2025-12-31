@@ -203,7 +203,6 @@ fn active(input: String, mut history: &mut CmdHistory) -> bool {
                             for _i in 0..input.len() {
                                 print!("\x08 \x08");
                             }
-                            input.clear();
                             io::stdout().flush().unwrap();
                             let mut temp = history.history.clone();
                             temp.push((history.length, String::new()));
@@ -226,13 +225,12 @@ fn active(input: String, mut history: &mut CmdHistory) -> bool {
                             for _i in 0..input.len() {
                                 print!("\x08 \x08");
                             }
-                            input.clear();
                             io::stdout().flush().unwrap();
                             let mut temp = history.history.clone();
                             temp.push((history.length, String::new()));
                             let len = temp.len() - 1;
                             if history_offset == 0 {
-                                input = String::new();
+                                String::new();
                             } else {
                                 if history_offset > len {
                                     history_offset = len;
@@ -893,7 +891,7 @@ fn save_to_txt(filename: &str, content: &CmdHistory) -> io::Result<()> {
                 .create(true)
                 .open(filename)?;
     file.write_all(output.as_bytes())?;
-    file.write_all(b"\n")?;
+    //file.write_all(b"\n")?;
     //write!(file, "{}\n", content)?;
     //print!("{}", content);
     Ok(())
