@@ -100,7 +100,7 @@ impl FromStr for CmdHistory {
 }
 
 fn main() {
-    println!("{}", *HISTORY);
+    //println!("{}", *HISTORY);
     let mut history = CmdHistory::from_vec(&get_history());
     //let mut temp_history = history.clone();
     //let mut history = CmdHistory::new();
@@ -761,7 +761,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                     let mut length = history.len() - *hist_length;
                     if args.len() > 1 {
                         //execute_cmd(format!("cat {}", args[1]), history);
-                        save_to_txt(&args[1].clone(), &mut history, &mut length);
+                        append_to_txt(&args[1].clone(), &mut history, &mut length);
                     }
                     *hist_length = history.len();
                     return String::new();
@@ -863,7 +863,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                     let mut length = history.len() - *hist_length;
                     if args.len() > 1 {
                         //execute_cmd(format!("cat {}", args[1]), history);
-                        save_to_txt(&args[1].clone(), &mut history, &mut length);
+                        append_to_txt(&args[1].clone(), &mut history, &mut length);
                     }
                     *hist_length = history.len();
                     return String::new();
@@ -930,6 +930,19 @@ fn save_to_txt(filename: &str, content: &CmdHistory, hist_length: &mut usize) ->
     //println!("{}", output);
     let mut file = OpenOptions::new() 
                 .write(true)
+                .create(true)
+                .open(filename)?;
+    file.write_all(output.as_bytes())?;
+    //file.write_all(b"\n")?;
+    //write!(file, "{}\n", content)?;
+    //print!("{}", content);
+    Ok(())
+}
+fn append_to_txt(filename: &str, content: &CmdHistory, hist_length: &mut usize) -> io::Result<()> {
+    let output = format!("{}", content.display_last(*hist_length));
+    //println!("{}", output);
+    let mut file = OpenOptions::new() 
+                .write(true)
                 .append(true)
                 .create(true)
                 .open(filename)?;
@@ -942,5 +955,6 @@ fn save_to_txt(filename: &str, content: &CmdHistory, hist_length: &mut usize) ->
 
 fn load_from_file(filename: &str) -> io::Result<CmdHistory> {
     let content = std::fs::read_to_string(filename)?;
+    //print!("{}", content);
     CmdHistory::from_str(&content).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to parse data"))
 }
