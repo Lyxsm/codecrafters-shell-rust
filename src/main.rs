@@ -2,7 +2,7 @@
 use std::{
     io::{self, Write, Read, BufRead},
     process::{Command, Stdio},
-    fs::{self, File}, 
+    fs::{self, File, OpenOptions}, 
     fmt,
     str::FromStr,
     collections::HashMap, 
@@ -729,6 +729,12 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                         add_history_file(&args[1].clone(), &mut history);
                     }
                     return String::new();
+                } else if args[0].trim() == "-w" {
+                    if args.len() > 1 {
+                        //execute_cmd(format!("cat {}", args[1]), history);
+                        save_to_txt(&args[1].clone(), &mut history);
+                    }
+                    return String::new();
                 } else {
                     for (count, cmd) in entries {
                         output.push_str(&format!("    {}  {}\n", count, cmd));
@@ -816,6 +822,12 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                         add_history_file(&args[1].clone(), &mut history);
                     }
                     return String::new();
+                } else if args[0].trim() == "-w" {
+                    if args.len() > 1 {
+                        //execute_cmd(format!("cat {}", args[1]), history);
+                        save_to_txt(&args[1].clone(), &mut history);
+                    }
+                    return String::new();
                 } else {
                     for (count, cmd) in entries {
                         output.push_str(&format!("    {}  {}\n", count, cmd));
@@ -875,8 +887,14 @@ fn add_to_history(input: String, history: &mut CmdHistory) {
 }
 
 fn save_to_txt(filename: &str, content: &CmdHistory) -> io::Result<()> {
-    let mut file = File::create(filename)?;
-    write!(file, "{}\n", content)?;
+    let output = format!("{content}");
+    let mut file = OpenOptions::new() 
+                .write(true)
+                .create(true)
+                .open(filename)?;
+    file.write_all(output.as_bytes())?;
+    file.write_all(b"\n")?;
+    //write!(file, "{}\n", content)?;
     //print!("{}", content);
     Ok(())
 }

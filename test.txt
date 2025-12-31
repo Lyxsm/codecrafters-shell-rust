@@ -1,2 +1,0 @@
-echo grape mango
-echo orange banana
