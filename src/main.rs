@@ -79,8 +79,9 @@ impl FromStr for CmdHistory {
 }
 
 fn main() {
-    let mut history = CmdHistory::from_vec(&get_history());
+    //let mut history = CmdHistory::from_vec(&get_history());
     //let mut temp_history = history.clone();
+    let mut history = CmdHistory::new();
     loop {
         let input = String::new();
         if !active(input, &mut history) {
