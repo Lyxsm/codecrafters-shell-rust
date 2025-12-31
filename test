@@ -1,3 +1,6 @@
 echo
 history
-history -w test
+rm -rf test
+history -a test
+cat test
+history -a test

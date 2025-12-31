@@ -1,0 +1,10 @@
+echo
+history
+ls
+history -a testtest
+echo
+history
+ls
+history -a testtest
+cat testtest
+history -a testtest

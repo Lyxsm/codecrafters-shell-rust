@@ -1,0 +1,4 @@
+history -a testing
+history
+echo
+echp
