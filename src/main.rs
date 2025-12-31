@@ -729,6 +729,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                     }    
                 } else if args[0].trim() == "-r" {
                     if args.len() > 1 {
+                        execute_cmd(format!("cat {}", args[1]), history);
                         add_history_file(&args[1].clone(), &mut history);
                     }
                     return String::new();
