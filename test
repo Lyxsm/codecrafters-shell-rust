@@ -1,6 +1,0 @@
-echo
-history
-rm -rf test
-history -a test
-cat test
-history -a test

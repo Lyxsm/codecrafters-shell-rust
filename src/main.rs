@@ -713,7 +713,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
             } else {
                 output
             }
-        }, 
+        },
         "history" => {
             let mut output = String::new();
             let entries = history.history.clone();
@@ -742,13 +742,13 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                     return String::new();
                 } else if args[0].trim() == "-w" {
                     if args.len() > 1 {
+                        let mut length = history.len();
                         //execute_cmd(format!("cat {}", args[1]), history);
-                        save_to_txt(&args[1].clone(), &mut history, hist_length);
+                        save_to_txt(&args[1].clone(), &mut history, &mut length);
                     }
                     return String::new();
                 } else if args[0].trim() == "-a" {
                     let mut length = history.len() - *hist_length;
-                    //print!("{}", length);
                     if args.len() > 1 {
                         //execute_cmd(format!("cat {}", args[1]), history);
                         save_to_txt(&args[1].clone(), &mut history, &mut length);
@@ -844,8 +844,9 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                     return String::new();
                 } else if args[0].trim() == "-w" {
                     if args.len() > 1 {
+                        let mut length = history.len();
                         //execute_cmd(format!("cat {}", args[1]), history);
-                        save_to_txt(&args[1].clone(), &mut history, hist_length);
+                        save_to_txt(&args[1].clone(), &mut history, &mut length);
                     }
                     return String::new();
                 } else if args[0].trim() == "-a" {
