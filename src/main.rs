@@ -856,7 +856,7 @@ fn add_history_file(file: &str, history: &mut CmdHistory) {
         entries = CmdHistory::new().history;
     }
     for entry in entries {
-        print!("{:?}", entry);
+        //print!("{:?}", entry);
         history.push(entry.1);
     }
 }
