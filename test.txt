@@ -1,1 +1,2 @@
-   2  echo grape mango
+echo grape mango
+echo orange banana

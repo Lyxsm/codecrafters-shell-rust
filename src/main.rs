@@ -53,7 +53,7 @@ impl fmt::Display for CmdHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut buf = String::new();
         for (count, command) in &self.history {
-            buf += &format!("{} {}\n", count, command);
+            buf += &format!("{}\n", command);
         }
         write!(f, "{}", buf)
     }
@@ -67,13 +67,8 @@ impl FromStr for CmdHistory {
         let mut history = CmdHistory::new();
         if parts.len() > 0 {
             let mut history = CmdHistory::new();
-            //println!("{:?}", parts);
             for part in parts {
-                let split = part.split_once(" ").unwrap();
-                //println!("{split:?}");
-                //let count = split[0].parse::<i32>().map_err(|_| ())?;
-                let command = split.1.trim().to_string();
-                history.push(command);
+                history.push(part.to_string());
             }
             //println!("{}", history);
             Ok(history)
@@ -706,7 +701,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
             } else {
                 output
             }
-        },
+        }, 
         "history" => {
             let mut output = String::new();
             let entries = history.history.clone();
@@ -729,7 +724,7 @@ fn run_builtin(cmd: &str, args: &[String], target: &Option<(String, cmd::Target)
                     }    
                 } else if args[0].trim() == "-r" {
                     if args.len() > 1 {
-                        execute_cmd(format!("cat {}", args[1]), history);
+                        //execute_cmd(format!("cat {}", args[1]), history);
                         add_history_file(&args[1].clone(), &mut history);
                     }
                     return String::new();
@@ -793,7 +788,7 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
             } else {
                 output
             }
-        },
+        }, 
         "history" => {
             let mut output = String::new();
             let entries = history.history.clone();
@@ -815,7 +810,8 @@ fn run_builtin_stdin(cmd: &str, args: &[String], target: &Option<(String, cmd::T
                         output.push_str(&format!("    {}  {}\n", entry.0, entry.1));
                     }    
                 } else if args[0].trim() == "-r" {
-                    if args.len() >= 1 {
+                    if args.len() > 1 {
+                        //execute_cmd(format!("cat {}", args[1]), history);
                         add_history_file(&args[1].clone(), &mut history);
                     }
                     return String::new();
@@ -860,6 +856,7 @@ fn add_history_file(file: &str, history: &mut CmdHistory) {
         entries = CmdHistory::new().history;
     }
     for entry in entries {
+        print!("{:?}", entry);
         history.push(entry.1);
     }
 }
