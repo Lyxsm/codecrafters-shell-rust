@@ -3,11 +3,12 @@ use std::{
     io::{self, Write, Read, BufRead},
     process::{Command, Stdio},
     fs::{self, File, OpenOptions}, 
-    fmt,
+    fmt, env,
     str::FromStr,
     collections::HashMap, 
     time::Duration,
 };
+use lazy_static::lazy_static;
 use wait_timeout::ChildExt;
 use serde::{Serialize, Deserialize};
 #[allow(unused_imports)]
@@ -18,7 +19,15 @@ use crossterm::{
 
 mod cmd;
 
-const HISTORY: &str = "history";
+//const HISTORY: &str = "$HISTFILE";
+
+lazy_static! {
+    static ref HISTORY: String = {
+        env::var("HISTFILE").unwrap_or_else(|_| {
+            String::from("history")
+        })
+    };
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct CmdHistory {
@@ -91,9 +100,10 @@ impl FromStr for CmdHistory {
 }
 
 fn main() {
-    //let mut history = CmdHistory::from_vec(&get_history());
+    println!("{}", *HISTORY);
+    let mut history = CmdHistory::from_vec(&get_history());
     //let mut temp_history = history.clone();
-    let mut history = CmdHistory::new();
+    //let mut history = CmdHistory::new();
     let mut length = history.len();
     loop {
         let input = String::new();
@@ -883,7 +893,7 @@ fn first_number(strings: &Vec<String>) -> Option<f64> {
 }
 
 fn get_history() -> Vec<(usize, String)> {
-    if let Ok(history) = load_from_file(HISTORY) {
+    if let Ok(history) = load_from_file(&HISTORY) {
         history.history
     } else {
         CmdHistory::new().history
@@ -910,8 +920,8 @@ fn add_to_history(input: String, history: &mut CmdHistory) {
         //let input = format!("{}", input);
         history.push(input);
         //print!("{}", history);
-        //save_to_json(HISTORY, &history);
-        save_to_txt(HISTORY, &history, &mut history.len()).expect("Failed to save history to file");
+        //save_to_json(&HISTORY, &history);
+        save_to_txt(&HISTORY, &history, &mut history.len()).expect("Failed to save history to file");
     }
 }
 
