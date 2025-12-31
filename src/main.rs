@@ -18,7 +18,7 @@ use crossterm::{
 
 mod cmd;
 
-const HISTORY: &str = "history";
+const HISTORY: &str = "history.txt";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct CmdHistory {
